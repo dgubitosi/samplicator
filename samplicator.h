@@ -21,6 +21,7 @@ struct samplicator_context {
   const char		       *fport_spec;
   long				sockbuflen;
   long				pdulen;
+  unsigned                      tx_delay;
   int				debug;
   int				timeout;
   int				fork;
@@ -47,7 +48,7 @@ struct receiver {
   int				freq;
   int				freqcount;
   int				ttl;
-  enum receiver_flags		flags;
+  enum receiver_flags           flags;
 
   /* statistics */
   uint32_t			out_packets;
@@ -62,8 +63,6 @@ struct source_context {
   socklen_t			addrlen;
   struct receiver	       *receivers;
   unsigned			nreceivers;
-  unsigned			tx_delay;
-  int				debug;
 
   /* statistics */
   uint32_t			matched_packets;

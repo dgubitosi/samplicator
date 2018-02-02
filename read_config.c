@@ -741,23 +741,12 @@ parse_args (argc, argv, ctx)
   extern char *optarg;
   extern int errno, optind;
   int i;
-  struct source_context *sctx = calloc (1, sizeof (struct source_context));
-
-  if (sctx == 0)
-    {
-      fprintf (stderr, "Out of memory\n");
-      return -1;
-    }
 
   ctx->config_file_name = "<command line>";
   ctx->config_file_lineno = 1;
-  sctx->nreceivers = 0;
-  ctx->sources = sctx;
-
-  sctx->next = (struct source_context *) NULL;
-
   ctx->sockbuflen = DEFAULT_SOCKBUFLEN;
   ctx->pdulen = DEFAULT_PDULEN;
+  ctx->tx_delay = 0;
   ctx->faddr_spec = 0;
   bzero (&ctx->faddr, sizeof ctx->faddr);
   ctx->fport_spec = FLOWPORT;
@@ -769,12 +758,20 @@ parse_args (argc, argv, ctx)
   ctx->pid_file = (const char *) 0;
   ctx->sources = 0;
   ctx->default_receiver_flags = pf_CHECKSUM;
+
   /* assume that command-line supplied receivers want to get all data */
+  struct source_context *sctx = calloc (1, sizeof (struct source_context));
+  if (sctx == 0)
+    {
+      fprintf (stderr, "Out of memory\n");
+      return -1;
+    }
+  sctx->nreceivers = 0;
+  sctx->next = (struct source_context *) NULL;
+
   sctx->source.ss_family = AF_INET;
   ((struct sockaddr_in *) &sctx->source)->sin_addr.s_addr = 0;
   ((struct sockaddr_in *) &sctx->mask)->sin_addr.s_addr = 0;
-
-  sctx->tx_delay = 0;
 
   optind = 1;
   while ((i = getopt (argc, (char **) argv, "hu:b:d:t:m:p:s:x:c:fSn46")) != -1)
@@ -806,7 +803,7 @@ parse_args (argc, argv, ctx)
 	  ctx->faddr_spec = optarg;
 	  break;
 	case 'x': /* transmit delay */
-	  sctx->tx_delay = atoi (optarg);
+	  ctx->tx_delay = atoi (optarg);
 	  break;
 	case 'S': /* spoof */
 	  ctx->default_receiver_flags |= pf_SPOOF;

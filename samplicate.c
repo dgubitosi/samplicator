@@ -433,8 +433,8 @@ samplicate (ctx)
 		    {
 		      receiver->freqcount -= 1;
 		    }
-		  if (sctx->tx_delay)
-		    usleep (sctx->tx_delay);
+		  if (ctx->tx_delay)
+		    usleep (ctx->tx_delay);
 		}
 	    }
 	  else
