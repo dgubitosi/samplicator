@@ -215,10 +215,15 @@ init_samplicator (ctx)
       return -1;
     }
 
-  /* check is there actually at least one configured data receiver */
-  for (i = 0, sctx = ctx->sources; sctx != NULL; sctx = sctx->next)
+  unsigned source_type;
+  /* check both standard sources and unmatched_sources for receivers */
+  for (source_type = TYPE_STANDARD ; source_type < NUM_TYPES ; source_type++)
     {
-      i += sctx->nreceivers; 
+      /* check is there actually at least one configured data receiver */
+      for (sctx = ctx->sources[source_type]; sctx != NULL; sctx = sctx->next)
+        {
+          i += sctx->nreceivers;
+        }
     }
   if (i == 0)
     {
@@ -327,8 +332,8 @@ samplicate (ctx)
   char serv[6];
 
   while (1)
-    {
-      if (ctx->timeout)
+  {
+    if (ctx->timeout)
       {
           struct pollfd fds[1];
           fds[0].fd=ctx->fsockfd;
@@ -375,14 +380,47 @@ samplicate (ctx)
 	  fprintf (stderr, "received %d bytes from %s:%s\n", n, host, serv);
 	}
 
-      for (sctx = ctx->sources; sctx != NULL; sctx = sctx->next)
+      /*
+         change in operation
+         sources are compared against three categories in this explicit order:
+           blacklist, standard, unatmched
+           1. blacklist matches are ignored
+           2. standard matches are forwarded to their receiver list
+           3. anything left over is forwarded by unmatched
+         processing ends at the end of the matching category
+      */
+
+      unsigned matches = 0;
+      unsigned source_type;
+      for (source_type = TYPE_BLACKLIST; matches == 0 && source_type < TYPE_UNKNOWN ; source_type++)
+      {
+        for (sctx = ctx->sources[source_type]; sctx != NULL; sctx = sctx->next)
 	{
 	  if (match_addr_p ((struct sockaddr *) &remote_address,
 			    (struct sockaddr *) &sctx->source,
 			    (struct sockaddr *) &sctx->mask))
 	    {
+              matches++;
 	      sctx->matched_packets += 1;
 	      sctx->matched_octets += n;
+
+              /* no need to continue if the source is blacklisted */
+              if (source_type == TYPE_BLACKLIST)
+              {
+      if (ctx->debug)
+        {
+          if (getnameinfo ((struct sockaddr *) &remote_address, addrlen,
+                           host, INET6_ADDRSTRLEN,
+                           serv, 6,
+                           NI_NUMERICHOST|NI_NUMERICSERV) == -1)
+            {
+              strcpy (host, "???");
+            }
+          fprintf (stderr, "Ignoring blacklisted host %s\n", host);
+        }
+
+                break;
+              }
 
 	      for (i = 0; i < sctx->nreceivers; ++i)
 		{
@@ -463,6 +501,7 @@ samplicate (ctx)
 		  fprintf (stderr, "%s\n", host);
 		}
 	    }
+        }
 	}
     }
 }
@@ -531,8 +570,11 @@ make_send_sockets (struct samplicator_context *ctx)
 
   struct source_context *sctx;
   unsigned i;
+  unsigned source_type;
+  for (source_type = TYPE_STANDARD; source_type < TYPE_UNKNOWN ; source_type++)
+    {
 
-  for (sctx = ctx->sources; sctx != 0; sctx = sctx->next)
+  for (sctx = ctx->sources[source_type]; sctx != 0; sctx = sctx->next)
     {
       for (i = 0; i < sctx->nreceivers; ++i)
 	{
@@ -561,5 +603,6 @@ make_send_sockets (struct samplicator_context *ctx)
 	  receiver->fd = socks[spoof_p][af_index];
 	}
     }
+    } /* end for t */
   return 0;
 }

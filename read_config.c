@@ -361,12 +361,44 @@ parse_addr_mask (start, end, ctx, addrp, maskp, addrlenp)
      socklen_t *addrlenp;
 {
   const char *c, *slash = 0;
+  int unmatched = -1;
+
+  /*
+     an unmatched source is denoted by * in the configuration file
+     packets from a source not explicitly matched from the standard
+     sources will be forwarded to these receivers
+     a standard source of 0.0.0.0/0 prevents the unmatched category
+  */
 
   c = start;
-  while (c < end && *c != '/')
-    ++c;
-  if (c < end)
-    slash = c;
+  while (c < end)
+  {
+    if (*c == '/')
+      slash = c;
+    /* asterick signifies unmatched sources */
+    else if (*c == '*')
+      unmatched = 1;
+    c++;
+  }
+
+  /* found marker for unmatched sources */
+  if (unmatched > 0)
+  {
+    /*
+       set match criteria to 0.0.0.0/0 so everything that hits this
+       category will match
+    */
+
+    bzero (addrp, sizeof (struct sockaddr_in));
+    addrp->ss_family = AF_INET;
+    memset (&((struct sockaddr_in *) addrp)->sin_addr, 0, 4);
+
+    bzero (maskp, sizeof (struct sockaddr_in));
+    maskp->ss_family = AF_INET;
+    memset (&((struct sockaddr_in *) maskp)->sin_addr, 0, 4);
+
+    return TYPE_UNMATCHED;
+  }
 
   if (parse_addr (start, slash == 0 ? end : slash, ctx, addrp, addrlenp) == -1)
     return -1;
@@ -378,7 +410,8 @@ parse_addr_mask (start, end, ctx, addrp, maskp, addrlenp)
     }
   else
     set_default_mask (ctx, maskp, addrp);
-  return 0;
+
+  return TYPE_STANDARD;
 }
 
 /*
@@ -448,10 +481,12 @@ parse_line (ctx, start, end)
       while (c < end && isspace (*c))
 	++c;
       rhs_start = c;
+
       sctx = calloc (1, sizeof (struct source_context));
 
-      if (parse_addr_mask (lhs_start, lhs_end, ctx,
-			   &sctx->source, &sctx->mask, &sctx->addrlen) != 0)
+      int ret = parse_addr_mask (lhs_start, lhs_end, ctx,
+			   &sctx->source, &sctx->mask, &sctx->addrlen);
+      if (ret < 0)
 	return -1;
 
       argc = 0;
@@ -468,13 +503,21 @@ parse_line (ctx, start, end)
 	  if (c < end)
 	    c++;
 	}
-      if (argc > 0) 
-	{
-	  if (parse_receivers (argc, argv, ctx, sctx) == -1)
-	    {
-	      return -1;
-	    }
-	}
+
+      /*
+         no receivers is now treated as a blacklisted source
+         where packets are not forwarded
+         prevent the combination of blacklist and unmatched
+      */
+
+      unsigned source_type = (unsigned) ret;
+      if (source_type == TYPE_UNMATCHED && argc == 0)
+        return -1;
+
+      if (argc == 0)
+        source_type = TYPE_BLACKLIST;
+      if (parse_receivers (argc, argv, ctx, sctx, source_type) == -1)
+        return -1;
     }
   else
     {
@@ -689,11 +732,12 @@ expand_port_ranges (argc, argv, exp_argc, exp_argv)
 
 
 int
-parse_receivers (argc, argv, ctx, sctx)
+parse_receivers (argc, argv, ctx, sctx, source_type)
      int argc;
      const char **argv;
      struct samplicator_context *ctx;
      struct source_context *sctx;
+     unsigned source_type;
 {
   int i;
   int exp_argc;
@@ -711,22 +755,26 @@ parse_receivers (argc, argv, ctx, sctx)
     return parse_error (ctx, "Out of memory");
   }
 
-  /* fill in receiver entries */
-  for (i = 0; i < exp_argc; ++i)
+  /* no receivers */
+  if (source_type != TYPE_BLACKLIST)
     {
-      if (parse_receiver (&sctx->receivers[i], exp_argv[i], ctx) != 0)
-	{
-	  return -1;
+      /* fill in receiver entries */
+      for (i = 0; i < exp_argc; ++i)
+        {
+          if (parse_receiver (&sctx->receivers[i], exp_argv[i], ctx) != 0)
+	    return -1;
 	}
     }
-  if (ctx->sources == NULL)
+
+  /* append to the correct source_context */
+  if (ctx->sources[source_type] == NULL)
     {
-      ctx->sources = sctx;
+      ctx->sources[source_type] = sctx;
     }
   else
     {
       struct source_context *ptr;
-      for (ptr = ctx->sources; ptr->next != NULL; ptr = ptr->next);
+      for (ptr = ctx->sources[source_type]; ptr->next != NULL; ptr = ptr->next);
       ptr->next = sctx;
     } 
   return 0;
@@ -744,6 +792,7 @@ parse_args (argc, argv, ctx)
 
   ctx->config_file_name = "<command line>";
   ctx->config_file_lineno = 1;
+
   ctx->sockbuflen = DEFAULT_SOCKBUFLEN;
   ctx->pdulen = DEFAULT_PDULEN;
   ctx->tx_delay = 0;
@@ -756,8 +805,11 @@ parse_args (argc, argv, ctx)
   ctx->ipv6_only = 0;
   ctx->fork = 0;
   ctx->pid_file = (const char *) 0;
-  ctx->sources = 0;
   ctx->default_receiver_flags = pf_CHECKSUM;
+
+  unsigned source_type;
+  for (source_type = TYPE_BLACKLIST; source_type < NUM_TYPES; source_type++)
+    ctx->sources[source_type] = NULL;
 
   /* assume that command-line supplied receivers want to get all data */
   struct source_context *sctx = calloc (1, sizeof (struct source_context));
@@ -768,13 +820,13 @@ parse_args (argc, argv, ctx)
     }
   sctx->nreceivers = 0;
   sctx->next = (struct source_context *) NULL;
-
   sctx->source.ss_family = AF_INET;
   ((struct sockaddr_in *) &sctx->source)->sin_addr.s_addr = 0;
   ((struct sockaddr_in *) &sctx->mask)->sin_addr.s_addr = 0;
 
+  unsigned unmatched_flag = 0;
   optind = 1;
-  while ((i = getopt (argc, (char **) argv, "hu:b:d:t:m:p:s:x:c:fSn46")) != -1)
+  while ((i = getopt (argc, (char **) argv, "hu:b:d:t:m:p:s:x:c:fSn46X")) != -1)
     {
       switch (i)
 	{
@@ -829,6 +881,10 @@ parse_args (argc, argv, ctx)
 	  ctx->ipv4_only = 0;
 	  ctx->ipv6_only = 1;
 	  break;
+        case 'X':
+          /* uses command line receivers for unmatched sources */
+          unmatched_flag = TYPE_UNMATCHED;
+          break;
 	default:
 	  short_usage (argv[0]);
 	  return -1;
@@ -837,7 +893,7 @@ parse_args (argc, argv, ctx)
 
   if (argc - optind > 0)
     {
-      if (parse_receivers (argc - optind, argv + optind, ctx, sctx) == -1)
+      if (parse_receivers (argc - optind, argv + optind, ctx, sctx, unmatched_flag) == -1)
 	{
 	  short_usage (argv[0]);
 	  return -1;

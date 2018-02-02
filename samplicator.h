@@ -14,8 +14,17 @@ enum receiver_flags
   pf_CHECKSUM	= 0x0002,
 };
 
+enum SOURCE_TYPES
+{
+  TYPE_BLACKLIST,
+  TYPE_STANDARD,
+  TYPE_UNMATCHED,
+  TYPE_UNKNOWN
+};
+#define NUM_TYPES TYPE_UNKNOWN
+
 struct samplicator_context {
-  struct source_context        *sources;
+  struct source_context        *sources[NUM_TYPES];
   const char		       *faddr_spec;
   struct sockaddr_storage	faddr;
   const char		       *fport_spec;
@@ -48,7 +57,7 @@ struct receiver {
   int				freq;
   int				freqcount;
   int				ttl;
-  enum receiver_flags           flags;
+  enum receiver_flags		flags;
 
   /* statistics */
   uint32_t			out_packets;
