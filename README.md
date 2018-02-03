@@ -39,7 +39,7 @@ Where each `<option>` can be one of
 	-b <buflen>	size of receive buffer (default 65536)
 	-c <configfile>	specify a config file to read
 	-x <delay>	to specify a transmission delay after each packet,
-		    in units of	microseconds
+			in units of microseconds
 	-S		maintain (spoof) source addresses
 	-n		don't compute UDP checksum (only relevant with -S)
 	-f		fork program into background
@@ -48,6 +48,7 @@ Where each `<option>` can be one of
 	-6		IPv6 only
 	-h		to print a usage message and exit
 	-u <pdulen>	size of max pdu on listened socket (default 65536)
+	-X		use command line receivers for unmatched sources\n\
 
 and each `<destination>` should be specified as
 `<addr>[/<port>[/<interval>[,ttl]]]`, where
@@ -61,14 +62,34 @@ and each `<destination>` should be specified as
 
 Config file format:
 
-    a.b.c.d[/e.f.g.h]: receiver ...
+	source: [receiver ...]
+
+	a.b.c.d[/e.f.g.h]: receiver ...
+	a.b.c.d[/e.f.g.h]:
+	*: receiver ...
 
 where:
 
-	a.b.c.d     is the sender's IP address
-    e.f.g.h     is a mask to apply to the sender (default 255.255.255.255)
-    receiver    see above.
+	a.b.c.d                  is the senders IP address
+	e.f.g.h                  is a mask to apply to the sender (default 255.255.255.255)
+	*                        denotes receivers for unmatched sources
+	receiver                 see above
 
-Receivers specified on the command line will get all packets, those
-specified in the config-file will get only packets with a matching
-source.
+The source address of incoming packets is matched against three categories in
+order: 1) blacklist, 2) standard, 3) unmatched.
+Source addresses will only be processed by the first category where a match
+is found.
+
+Receivers from **all** matching sources defined in the configuration will get
+copies as sources may overlap with masks.  Sources defined without a receiver
+are the exception.  They are explicitly blacklisted and dropped before any
+further matches are processed.
+
+The wildcard source is used to denote the unmatched category.  A source address
+that does not match any known sources from the configuration are processed here.
+Unmatched sources are dropped unless the wildcard source is explicitly defined.
+
+Any receivers defined on the command line will get all packets as they match
+as 0.0.0.0/0. The -X option changes this behavior and places all command line
+receivers in the unmatched category.
+

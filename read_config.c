@@ -931,18 +931,34 @@ The port can be a number, a range, or a number plus the number of instances:\n\
 \n\
 Config file format:\n\
 \n\
+  source: [receiver ...]\n\
+\n\
   a.b.c.d[/e.f.g.h]: receiver ...\n\
-  a.b.c.d[/e.f.g.h]: \n\
+  a.b.c.d[/e.f.g.h]:\n\
   *: receiver ...\n\
 \n\
 where:\n\
   a.b.c.d                  is the senders IP address\n\
   e.f.g.h                  is a mask to apply to the sender (default 255.255.255.255)\n\
-  receiver                 see above.\n\
   *                        denotes receivers for unmatched sources\n\
+  receiver                 see above\n\
 \n\
-Receivers specified on the command line will get all packets unless -X is applied.\n\
-Those specified in the config-file will get only packets with a matching source.\n\
-A source in the config file without any receivers will be blacklisted.\n\
+The source address of incoming packets is matched against three categories in\n\
+order: 1) blacklist, 2) standard, 3) unmatched.\n\
+Source addresses will only be processed by the first category where a match\n\
+is found.\n\
+\n\
+Receivers from *all* matching sources defined in the configuration will get\n\
+copies as sources may overlap with masks.  Sources defined without a receiver\n\
+are the exception.  They are explicitly blacklisted and dropped before any\n\
+further matches are processed.\n\
+\n\
+The wildcard source is used to denote the unmatched category.  A source address\n\
+that does not match any known sources from the configuration are processed here.\n\
+Unmatched sources are dropped unless the wildcard source is explicitly defined.\n\
+\n\
+Any receivers defined on the command line will get all packets as they match\n\
+as 0.0.0.0/0. The -X option changes this behavior and places all command line\n\
+receivers in the unmatched category.\n\
 ", progname, FLOWPORT, (unsigned long) DEFAULT_SOCKBUFLEN, PORT_SEPARATOR, FREQ_SEPARATOR, TTL_SEPARATOR, FLOWPORT, DEFAULT_TTL);
 }
