@@ -932,6 +932,7 @@ Supported options:\n\
   -6                       IPv6 only\n\
   -h                       print this usage message and exit\n\
   -u <pdulen>              size of max pdu on listened socket (default 65536)\n\
+  -X                       use command line receivers for unmatched sources\n\
 \n\
 Specifying receivers:\n\
 \n\
@@ -950,13 +951,18 @@ The port can be a number, a range, or a number plus the number of instances:\n\
 Config file format:\n\
 \n\
   a.b.c.d[/e.f.g.h]: receiver ...\n\
+  a.b.c.d[/e.f.g.h]: \n\
+  *: receiver ...\n\
+\n\
 where:\n\
   a.b.c.d                  is the senders IP address\n\
   e.f.g.h                  is a mask to apply to the sender (default 255.255.255.255)\n\
   receiver                 see above.\n\
+  *                        denotes receivers for unmatched sources\n\
 \n\
-Receivers specified on the command line will get all packets, those\n\
-specified in the config-file will get only packets with a matching source.\n\n\
+Receivers specified on the command line will get all packets unless -X is applied.\n\
+Those specified in the config-file will get only packets with a matching source.\n\
+A source in the config file without any receivers will be blacklisted.\n\
 ",
 	   progname,
 	   FLOWPORT, (unsigned long) DEFAULT_SOCKBUFLEN,
