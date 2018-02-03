@@ -377,14 +377,9 @@ parse_addr_mask (start, end, ctx, addrp, maskp, addrlenp)
        category will match
      */
 
-    bzero (addrp, sizeof (struct sockaddr_in));
-    addrp->ss_family = AF_INET;
-    memset (&((struct sockaddr_in *) addrp)->sin_addr, 0, 4);
-
-    bzero (maskp, sizeof (struct sockaddr_in));
-    maskp->ss_family = AF_INET;
-    memset (&((struct sockaddr_in *) maskp)->sin_addr, 0, 4);
-
+    char *zero = "0.0.0.0";
+    resolve_addr (zero, ctx, addrp, addrlenp);
+    resolve_addr (zero, ctx, maskp, addrlenp);
     return TYPE_UNMATCHED;
   }
 
@@ -797,20 +792,7 @@ parse_args (argc, argv, ctx)
   for (source_type = TYPE_BLACKLIST; source_type < NUM_TYPES; source_type++)
     ctx->sources[source_type] = NULL;
 
-  /* assume that command-line supplied receivers want to get all data */
-  struct source_context *sctx = calloc (1, sizeof (struct source_context));
-  if (sctx == 0)
-  {
-    fprintf (stderr, "Out of memory\n");
-    return -1;
-  }
-  sctx->nreceivers = 0;
-  sctx->next = (struct source_context *) NULL;
-  sctx->source.ss_family = AF_INET;
-  ((struct sockaddr_in *) &sctx->source)->sin_addr.s_addr = 0;
-  ((struct sockaddr_in *) &sctx->mask)->sin_addr.s_addr = 0;
-
-  unsigned unmatched_flag = 0;
+  unsigned category = TYPE_STANDARD;
   optind = 1;
   while ((i = getopt (argc, (char **) argv, "hu:b:d:t:m:p:s:x:c:fSn46X")) != -1)
   {
@@ -869,7 +851,7 @@ parse_args (argc, argv, ctx)
       break;
     case 'X':
       /* uses command line receivers for unmatched sources */
-      unmatched_flag = TYPE_UNMATCHED;
+      category = TYPE_UNMATCHED;
       break;
     default:
       short_usage (argv[0]);
@@ -879,7 +861,19 @@ parse_args (argc, argv, ctx)
 
   if (argc - optind > 0)
   {
-    if (parse_receivers (argc - optind, argv + optind, ctx, sctx, unmatched_flag) == -1)
+
+    /* assume that command-line supplied receivers want to get all data */
+    struct source_context *sctx = calloc (1, sizeof (struct source_context));
+    if (sctx == 0)
+    {
+      fprintf (stderr, "Out of memory\n");
+      return -1;
+    }
+    char *zero = "0.0.0.0";
+    resolve_addr (zero, ctx, &sctx->source, &sctx->addrlen);
+    resolve_addr (zero, ctx, &sctx->mask, &sctx->addrlen);
+
+    if (parse_receivers (argc - optind, argv + optind, ctx, sctx, category) == -1)
     {
       short_usage (argv[0]);
       return -1;

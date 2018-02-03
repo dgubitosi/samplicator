@@ -14,6 +14,8 @@ enum receiver_flags
   pf_CHECKSUM = 0x0002,
 };
 
+extern char *str_source_type[];
+
 enum SOURCE_TYPES
 {
   TYPE_BLACKLIST,

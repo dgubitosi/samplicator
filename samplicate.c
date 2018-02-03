@@ -45,6 +45,14 @@ static int make_udp_socket (long, int, int);
 static int make_recv_socket (struct samplicator_context *);
 static int make_send_sockets (struct samplicator_context *);
 
+char *str_source_type[] =
+{
+  "Blacklist",
+  "Standard",
+  "Unmatched",
+  "Unknown"
+};
+
 int
 main (argc, argv)
      int argc;
@@ -320,6 +328,8 @@ samplicate (ctx)
   int n;
   socklen_t addrlen;
   char host[INET6_ADDRSTRLEN];
+  char addr[INET6_ADDRSTRLEN];
+  char mask[INET6_ADDRSTRLEN];
   char serv[6];
 
   while (1)
@@ -382,6 +392,21 @@ samplicate (ctx)
     {
       for (sctx = ctx->sources[source_type]; sctx != NULL; sctx = sctx->next)
       {
+
+        if (ctx->debug)
+        {
+          if (getnameinfo ((struct sockaddr *) &sctx->source, sctx->addrlen,
+                           addr, INET6_ADDRSTRLEN, serv, 6, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
+          {
+            strcpy (addr, "???");
+          }
+          if (getnameinfo ((struct sockaddr *) &sctx->mask, sctx->addrlen,
+                           mask, INET6_ADDRSTRLEN, serv, 6, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
+          {
+            strcpy (mask, "???");
+          }
+        }
+
         if (match_addr_p ((struct sockaddr *) &remote_address,
                           (struct sockaddr *) &sctx->source, (struct sockaddr *) &sctx->mask))
         {
@@ -389,19 +414,16 @@ samplicate (ctx)
           sctx->matched_packets += 1;
           sctx->matched_octets += n;
 
+          /* output matches */
+          if (ctx->debug)
+            fprintf (stderr, "Host %s matches category %s (%s/%s)\n", host,
+                     str_source_type[source_type], addr, mask);
+
           /* no need to continue if the source is blacklisted */
           if (source_type == TYPE_BLACKLIST)
           {
             if (ctx->debug)
-            {
-              if (getnameinfo ((struct sockaddr *) &remote_address, addrlen,
-                               host, INET6_ADDRSTRLEN, serv, 6, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
-              {
-                strcpy (host, "???");
-              }
-              fprintf (stderr, "Ignoring blacklisted host %s\n", host);
-            }
-
+              fprintf (stderr, "  dropping blacklisted host %s\n", host);
             break;
           }
 
@@ -452,7 +474,8 @@ samplicate (ctx)
         }
         else
         {
-          if (ctx->debug)
+          /* skip this if the Unmatched category exists */
+          if (ctx->debug && ctx->sources[TYPE_UNMATCHED] == NULL)
           {
             if (getnameinfo ((struct sockaddr *) &sctx->source,
                              sctx->addrlen,
