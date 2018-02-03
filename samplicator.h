@@ -10,8 +10,8 @@
 
 enum receiver_flags
 {
-  pf_SPOOF	= 0x0001,
-  pf_CHECKSUM	= 0x0002,
+  pf_SPOOF = 0x0001,
+  pf_CHECKSUM = 0x0002,
 };
 
 enum SOURCE_TYPES
@@ -23,59 +23,62 @@ enum SOURCE_TYPES
 };
 #define NUM_TYPES TYPE_UNKNOWN
 
-struct samplicator_context {
-  struct source_context        *sources[NUM_TYPES];
-  const char		       *faddr_spec;
-  struct sockaddr_storage	faddr;
-  const char		       *fport_spec;
-  long				sockbuflen;
-  long				pdulen;
-  unsigned                      tx_delay;
-  int				debug;
-  int				timeout;
-  int				fork;
-  int				ipv4_only;
-  int				ipv6_only;
-  const char		       *pid_file;
-  enum receiver_flags		default_receiver_flags;
+struct samplicator_context
+{
+  struct source_context *sources[NUM_TYPES];
+  const char *faddr_spec;
+  struct sockaddr_storage faddr;
+  const char *fport_spec;
+  long sockbuflen;
+  long pdulen;
+  unsigned tx_delay;
+  int debug;
+  int timeout;
+  int fork;
+  int ipv4_only;
+  int ipv6_only;
+  const char *pid_file;
+  enum receiver_flags default_receiver_flags;
 
-  int				fsockfd;
-  socklen_t			fsockaddrlen;
+  int fsockfd;
+  socklen_t fsockaddrlen;
 
-  const char		       *config_file_name;
-  int				config_file_lineno;
+  const char *config_file_name;
+  int config_file_lineno;
 
   /* statistics */
-  uint32_t			unmatched_packets;
+  uint32_t unmatched_packets;
 };
 
-struct receiver {
-  int				fd;
-  struct sockaddr_storage	addr;
-  socklen_t			addrlen;
-  int				port;
-  int				freq;
-  int				freqcount;
-  int				ttl;
-  enum receiver_flags		flags;
+struct receiver
+{
+  int fd;
+  struct sockaddr_storage addr;
+  socklen_t addrlen;
+  int port;
+  int freq;
+  int freqcount;
+  int ttl;
+  enum receiver_flags flags;
 
   /* statistics */
-  uint32_t			out_packets;
-  uint32_t			out_errors;
-  uint64_t			out_octets;
+  uint32_t out_packets;
+  uint32_t out_errors;
+  uint64_t out_octets;
 };
 
-struct source_context {
-  struct source_context	       *next;
-  struct sockaddr_storage	source;
-  struct sockaddr_storage	mask;
-  socklen_t			addrlen;
-  struct receiver	       *receivers;
-  unsigned			nreceivers;
+struct source_context
+{
+  struct source_context *next;
+  struct sockaddr_storage source;
+  struct sockaddr_storage mask;
+  socklen_t addrlen;
+  struct receiver *receivers;
+  unsigned nreceivers;
 
   /* statistics */
-  uint32_t			matched_packets;
-  uint64_t			matched_octets;
+  uint32_t matched_packets;
+  uint64_t matched_octets;
 };
 
 #endif /* not _SAMPLICATOR_H_ */

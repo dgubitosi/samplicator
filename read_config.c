@@ -18,22 +18,22 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #ifdef HAVE_ARPA_INET_H
-# include <arpa/inet.h>
+#include <arpa/inet.h>
 #endif
 #include <netdb.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #if STDC_HEADERS
-# define bzero(b,n) memset(b,0,n)
+#define bzero(b,n) memset(b,0,n)
 #else
-# include <strings.h>
-# ifndef HAVE_MEMCPY
-#  define memcpy(d, s, n) bcopy ((s), (d), (n))
-# endif
+#include <strings.h>
+#ifndef HAVE_MEMCPY
+#define memcpy(d, s, n) bcopy ((s), (d), (n))
+#endif
 #endif
 #ifdef HAVE_CTYPE_H
-# include <ctype.h>
+#include <ctype.h>
 #endif
 
 #include "samplicator.h"
@@ -56,9 +56,7 @@
 static int parse_line (struct samplicator_context *, char *, const char *);
 static int parse_addr_mask (const char *, const char *,
 			    const struct samplicator_context *,
-			    struct sockaddr_storage *,
-			    struct sockaddr_storage *,
-			    socklen_t *);
+			    struct sockaddr_storage *, struct sockaddr_storage *, socklen_t *);
 static void short_usage (const char *);
 static void usage (const char *);
 
@@ -73,7 +71,7 @@ parse_error (const struct samplicator_context *ctx, const char *fmt, ...)
   va_end (fmt_args);
   return -1;
 }
-  
+
 
 /* copy_string_start_end (start, end)
 
@@ -90,8 +88,8 @@ copy_string_start_end (start, end)
      const char *start;
      const char *end;
 {
-  size_t len = end-start;
-  char *copy = malloc (len+1);
+  size_t len = end - start;
+  char *copy = malloc (len + 1);
   if (copy == 0)
     return 0;
   strncpy (copy, start, len);
@@ -127,24 +125,24 @@ read_cf_file (file, ctx)
   ctx->config_file_name = file;
   ctx->config_file_lineno = 0;
 
-  if ((cf = fopen (file,"r")) == NULL)
+  if ((cf = fopen (file, "r")) == NULL)
+  {
+    fprintf (stderr, "read_cf_file: cannot open %s. Aborting.\n", file);
+    return -1;
+  }
+  while (!feof (cf))
+  {
+    if (fgets (tmp_s, MAX_LINELEN, cf) == (char *) 0)
     {
-      fprintf (stderr, "read_cf_file: cannot open %s. Aborting.\n", file);
+      break;
+    }
+
+    ++ctx->config_file_lineno;
+    if (parse_line (ctx, tmp_s, tmp_s + strlen (tmp_s)) == -1)
+    {
       return -1;
     }
-  while (!feof (cf))
-    {
-      if (fgets (tmp_s, MAX_LINELEN, cf) == (char *) 0)
-	{
-	  break;
-	}
-	
-      ++ctx->config_file_lineno;
-      if (parse_line (ctx, tmp_s, tmp_s + strlen (tmp_s)) == -1)
-	{
-	  return -1;
-	}
-    }
+  }
   fclose (cf);
   return 0;
 }
@@ -167,18 +165,16 @@ read_cf_file (file, ctx)
  */
 static int
 resolve_addr (const char *addrstring,
-	      const struct samplicator_context *ctx,
-	      struct sockaddr_storage *addrp,
-	      socklen_t *addrlenp)
+	      const struct samplicator_context *ctx, struct sockaddr_storage *addrp, socklen_t * addrlenp)
 {
   struct addrinfo hints, *res;
 
   init_hints_from_preferences (&hints, ctx);
 
   if (getaddrinfo (addrstring, 0, &hints, &res) != 0 || res == 0)
-    {
-      return parse_error (ctx, "Could not parse address %s", addrstring);
-    }
+  {
+    return parse_error (ctx, "Could not parse address %s", addrstring);
+  }
   memcpy (addrp, res->ai_addr, res->ai_addrlen);
   if (addrlenp != 0)
     *addrlenp = res->ai_addrlen;
@@ -189,17 +185,15 @@ resolve_addr (const char *addrstring,
 static int
 parse_addr_1 (const char *start,
 	      const char *end,
-	      const struct samplicator_context *ctx,
-	      struct sockaddr_storage *addrp,
-	      socklen_t *addrlenp)
+	      const struct samplicator_context *ctx, struct sockaddr_storage *addrp, socklen_t * addrlenp)
 {
   char *copy = copy_string_start_end (start, end);
   int result;
 
   if (copy == 0)
-    {
-      return parse_error (ctx, "Out of memory");
-    }
+  {
+    return parse_error (ctx, "Out of memory");
+  }
   result = resolve_addr (copy, ctx, addrp, addrlenp);
   free (copy);
   return result;
@@ -208,29 +202,27 @@ parse_addr_1 (const char *start,
 static int
 parse_addr (const char *start,
 	    const char *end,
-	    const struct samplicator_context *ctx,
-	    struct sockaddr_storage *addrp,
-	    socklen_t *addrlenp)
+	    const struct samplicator_context *ctx, struct sockaddr_storage *addrp, socklen_t * addrlenp)
 {
   while (start < end && isspace (*start))
     ++start;
-  while (start < end && isspace (*(end-1)))
+  while (start < end && isspace (*(end - 1)))
     --end;
   if (start < end && *start == '[')
+  {
+    ++start;
+    if (start < end && *(end - 1) == ']')
+      --end;
+    else
     {
-      ++start;
-      if (start < end && *(end-1) == ']')
-	--end;
-      else
-	{
-	  return parse_error (ctx, "Mismatched brackets");
-	}
+      return parse_error (ctx, "Mismatched brackets");
     }
+  }
   return parse_addr_1 (start, end, ctx, addrp, addrlenp);
 }
 
 static void
-set_ipv4_netmask(struct sockaddr_in *maskp, int preflen)
+set_ipv4_netmask (struct sockaddr_in *maskp, int preflen)
 {
   in_addr_t *addrp = &maskp->sin_addr.s_addr;
   int k;
@@ -238,16 +230,16 @@ set_ipv4_netmask(struct sockaddr_in *maskp, int preflen)
   uint32_t haddr;
 
   haddr = 0xffffffff;
-  preflen = 32-preflen;
+  preflen = 32 - preflen;
   for (k = 0, bit = 1; k < preflen; ++k, bit <<= 1)
-    {
-      haddr &= ~bit;
-    }
+  {
+    haddr &= ~bit;
+  }
   *addrp = htonl (haddr);
 }
 
 static void
-set_ipv6_netmask(struct sockaddr_in6 *maskp, int preflen)
+set_ipv6_netmask (struct sockaddr_in6 *maskp, int preflen)
 {
   uint8_t *addrp = maskp->sin6_addr.s6_addr;
   int k;
@@ -255,100 +247,96 @@ set_ipv6_netmask(struct sockaddr_in6 *maskp, int preflen)
   unsigned octet_index;
 
   memset (addrp, 0, 16);
-  for (k = 0, bit = 128, octet_index = 0;
-       k < preflen;
-       ++k, bit >>= 1)
+  for (k = 0, bit = 128, octet_index = 0; k < preflen; ++k, bit >>= 1)
+  {
+    if (bit < 1)
     {
-      if (bit < 1)
-	{
-	  bit = 128, octet_index++;
-	}
-      addrp[octet_index] |= bit;
+      bit = 128, octet_index++;
     }
+    addrp[octet_index] |= bit;
+  }
 }
 
 static int
 parse_mask (const char *start,
 	    const char *end,
 	    const struct samplicator_context *ctx,
-	    struct sockaddr_storage *maskp,
-	    struct sockaddr_storage *addrp)
+	    struct sockaddr_storage *maskp, struct sockaddr_storage *addrp)
 {
   if (addrp->ss_family == AF_INET)
+  {
+    const char *cp = start;
+    while (cp < end && *cp != '.')
+      ++cp;
+    if (cp < end)		/* contains a dot, assume full netmask */
     {
-      const char *cp = start;
-      while (cp < end && *cp != '.')
-	++cp;
-      if (cp < end)		/* contains a dot, assume full netmask */
-	{
-	  socklen_t addrlen1;
-	  if (parse_addr_1 (start, end, ctx, maskp, &addrlen1) != 0)
-	    {
-	      return parse_error (ctx, "Cannot parse mask");
-	    }
-	  else
-	    {
-	      if (addrlen1 != sizeof (struct sockaddr_in))
-		{
-		  return parse_error (ctx, "Inconsistent addr/mask structures");
-		}
-	      return 0;
-	    }
-	}
+      socklen_t addrlen1;
+      if (parse_addr_1 (start, end, ctx, maskp, &addrlen1) != 0)
+      {
+	return parse_error (ctx, "Cannot parse mask");
+      }
       else
-	{			/* no dot, assume this is a prefix length */
-	  int preflen;
-	  char *int_end;
-	  preflen = strtol (start, &int_end, 10);
-	  if (int_end == start || int_end < end || preflen < 0 || preflen > 32)
-	    {
-	      return parse_error (ctx, "Bogus prefix length");
-	    }
-	  bzero (maskp, sizeof (struct sockaddr_in));
-	  ((struct sockaddr_in *)maskp)->sin_family = AF_INET;
-	  set_ipv4_netmask((struct sockaddr_in *)maskp, preflen);
-	  return 0;
+      {
+	if (addrlen1 != sizeof (struct sockaddr_in))
+	{
+	  return parse_error (ctx, "Inconsistent addr/mask structures");
 	}
+	return 0;
+      }
     }
-  else if (addrp->ss_family == AF_INET6)
-    {
+    else
+    {				/* no dot, assume this is a prefix length */
       int preflen;
       char *int_end;
       preflen = strtol (start, &int_end, 10);
-      if (int_end == start || int_end < end || preflen < 0 || preflen > 128)
-	{
-	  return parse_error (ctx, "Bogus prefix length");
-	}
-      bzero (maskp, sizeof (struct sockaddr_in6));
-      ((struct sockaddr_in6 *)maskp)->sin6_family = AF_INET6;
-      set_ipv6_netmask((struct sockaddr_in6 *)maskp, preflen);
+      if (int_end == start || int_end < end || preflen < 0 || preflen > 32)
+      {
+	return parse_error (ctx, "Bogus prefix length");
+      }
+      bzero (maskp, sizeof (struct sockaddr_in));
+      ((struct sockaddr_in *) maskp)->sin_family = AF_INET;
+      set_ipv4_netmask ((struct sockaddr_in *) maskp, preflen);
       return 0;
     }
-  else
+  }
+  else if (addrp->ss_family == AF_INET6)
+  {
+    int preflen;
+    char *int_end;
+    preflen = strtol (start, &int_end, 10);
+    if (int_end == start || int_end < end || preflen < 0 || preflen > 128)
     {
-      return parse_error (ctx, "Unsupported address family");
+      return parse_error (ctx, "Bogus prefix length");
     }
+    bzero (maskp, sizeof (struct sockaddr_in6));
+    ((struct sockaddr_in6 *) maskp)->sin6_family = AF_INET6;
+    set_ipv6_netmask ((struct sockaddr_in6 *) maskp, preflen);
+    return 0;
+  }
+  else
+  {
+    return parse_error (ctx, "Unsupported address family");
+  }
 }
 
 static int
 set_default_mask (const struct samplicator_context *ctx,
-		  struct sockaddr_storage *maskp,
-		  struct sockaddr_storage *addrp)
+		  struct sockaddr_storage *maskp, struct sockaddr_storage *addrp)
 {
   if (addrp->ss_family == AF_INET)
-    {
-      bzero (maskp, sizeof (struct sockaddr_in));
-      maskp->ss_family = AF_INET;
-      memset (&((struct sockaddr_in *) maskp)->sin_addr, 0xff, 4);
-      return 0;
-    }
+  {
+    bzero (maskp, sizeof (struct sockaddr_in));
+    maskp->ss_family = AF_INET;
+    memset (&((struct sockaddr_in *) maskp)->sin_addr, 0xff, 4);
+    return 0;
+  }
   else if (addrp->ss_family == AF_INET6)
-    {
-      bzero (maskp, sizeof (struct sockaddr_in6));
-      maskp->ss_family = AF_INET6;
-      memset (&((struct sockaddr_in6 *) maskp)->sin6_addr, 0xff, 16);
-      return 0;
-    }
+  {
+    bzero (maskp, sizeof (struct sockaddr_in6));
+    maskp->ss_family = AF_INET6;
+    memset (&((struct sockaddr_in6 *) maskp)->sin6_addr, 0xff, 16);
+    return 0;
+  }
   return parse_error (ctx, "Unknown address family %d", addrp->ss_family);
 }
 
@@ -368,7 +356,7 @@ parse_addr_mask (start, end, ctx, addrp, maskp, addrlenp)
      packets from a source not explicitly matched from the standard
      sources will be forwarded to these receivers
      a standard source of 0.0.0.0/0 prevents the unmatched category
-  */
+   */
 
   c = start;
   while (c < end)
@@ -387,7 +375,7 @@ parse_addr_mask (start, end, ctx, addrp, maskp, addrlenp)
     /*
        set match criteria to 0.0.0.0/0 so everything that hits this
        category will match
-    */
+     */
 
     bzero (addrp, sizeof (struct sockaddr_in));
     addrp->ss_family = AF_INET;
@@ -404,10 +392,10 @@ parse_addr_mask (start, end, ctx, addrp, maskp, addrlenp)
     return -1;
 
   if (slash != 0)
-    {
-      if (parse_mask (slash+1, end, ctx, maskp, addrp) == -1)
-	return -1;
-    }
+  {
+    if (parse_mask (slash + 1, end, ctx, maskp, addrp) == -1)
+      return -1;
+  }
   else
     set_default_mask (ctx, maskp, addrp);
 
@@ -435,10 +423,10 @@ parse_line (ctx, start, end)
 
   /* move end before the start of any comment at the end of the line,
      and before any whitepace preceding such a comment or EOL. */
-  for (c = start; c < end && *c != '#'; ++c) ;
+  for (c = start; c < end && *c != '#'; ++c);
   if (c < end)
     end = c;
-  while (end > start && isspace (*(end-1)))
+  while (end > start && isspace (*(end - 1)))
     --end;
   if (start == end)
     return 0;			/* empty line; skip. */
@@ -453,19 +441,22 @@ parse_line (ctx, start, end)
      addition, for IPv6 we only accept prefix lengths, not arbitrary
      netmasks.
 
-       [2001:db0:0:1::]/64: [2001:db0:0:2::3]:8000 [2001:db0:0:2::4]:8000
-  */
+     [2001:db0:0:1::]/64: [2001:db0:0:2::3]:8000 [2001:db0:0:2::4]:8000
+   */
 
   c = start;
   while (c < end && isspace (*c))
     ++c;
   lhs_start = c;
-  if (*c == '[') {
+  if (*c == '[')
+  {
     while (c < end && *c != ']')
       ++c;
     while (c < end && *c != ':')
       ++c;
-  } else {
+  }
+  else
+  {
     c = start;
     while (c < end && *c != ':')
       ++c;
@@ -475,61 +466,60 @@ parse_line (ctx, start, end)
      end because such a colon was not found. */
 
   if (c < end)
+  {
+    lhs_end = c;
+    ++c;			/* skip colon */
+    while (c < end && isspace (*c))
+      ++c;
+    rhs_start = c;
+
+    sctx = calloc (1, sizeof (struct source_context));
+
+    int ret = parse_addr_mask (lhs_start, lhs_end, ctx,
+			       &sctx->source, &sctx->mask, &sctx->addrlen);
+    if (ret < 0)
+      return -1;
+
+    argc = 0;
+    while (c < end)
     {
-      lhs_end = c;
-      ++c;			/* skip colon */
       while (c < end && isspace (*c))
-	++c;
-      rhs_start = c;
-
-      sctx = calloc (1, sizeof (struct source_context));
-
-      int ret = parse_addr_mask (lhs_start, lhs_end, ctx,
-			   &sctx->source, &sctx->mask, &sctx->addrlen);
-      if (ret < 0)
-	return -1;
-
-      argc = 0;
-      while (c < end)
-	{
-	  while (c < end && isspace (*c))
-	    c++;
-	  if (c >= end) break;
-	  e = c;
-	  while((*e != 0) && !isspace ((int) *e))
-	    e++;
-	  argv[argc++] = copy_string_start_end (c, e);
-	  c = e;
-	  if (c < end)
-	    c++;
-	}
-
-      /*
-         no receivers is now treated as a blacklisted source
-         where packets are not forwarded
-         prevent the combination of blacklist and unmatched
-      */
-
-      unsigned source_type = (unsigned) ret;
-      if (source_type == TYPE_UNMATCHED && argc == 0)
-        return -1;
-
-      if (argc == 0)
-        source_type = TYPE_BLACKLIST;
-      if (parse_receivers (argc, argv, ctx, sctx, source_type) == -1)
-        return -1;
+	c++;
+      if (c >= end)
+	break;
+      e = c;
+      while ((*e != 0) && !isspace ((int) *e))
+	e++;
+      argv[argc++] = copy_string_start_end (c, e);
+      c = e;
+      if (c < end)
+	c++;
     }
+
+    /*
+       no receivers is now treated as a blacklisted source
+       where packets are not forwarded
+       prevent the combination of blacklist and unmatched
+     */
+
+    unsigned source_type = (unsigned) ret;
+    if (source_type == TYPE_UNMATCHED && argc == 0)
+      return -1;
+
+    if (argc == 0)
+      source_type = TYPE_BLACKLIST;
+    if (parse_receivers (argc, argv, ctx, sctx, source_type) == -1)
+      return -1;
+  }
   else
-    {
-      return parse_error (ctx, "Missing colon");
-    }
+  {
+    return parse_error (ctx, "Missing colon");
+  }
   return 0;
 }
 
 static int
-parse_receiver (struct receiver *receiverp,
-		const char *arg,
-		struct samplicator_context *ctx)
+parse_receiver (struct receiver *receiverp, const char *arg, struct samplicator_context *ctx)
 {
   const char *start, *end;
   const char *host_start, *host_end;
@@ -540,97 +530,92 @@ parse_receiver (struct receiver *receiverp,
   receiverp->flags = ctx->default_receiver_flags;
   receiverp->freqcount = 0;
   receiverp->freq = 1;
-  receiverp->ttl = DEFAULT_TTL; 
+  receiverp->ttl = DEFAULT_TTL;
 
-  start = arg; end = start + strlen (arg);
+  start = arg;
+  end = start + strlen (arg);
   while (start < end && isspace (*start))
     ++start;
-  while (start < end && isspace (*(end-1)))
+  while (start < end && isspace (*(end - 1)))
     --end;
 
   if (start < end && *start == '[')
+  {
+    host_end = host_start = start + 1;
+    while (host_end < end && *host_end != ']')
+      ++host_end;
+    if (host_end == end)
     {
-      host_end = host_start = start+1;
-      while (host_end < end && *host_end != ']')
-	++host_end;
-      if (host_end == end)
-	{
-	  return parse_error (ctx, "Missing closing bracket");
-	}
-      start = host_end+1;
+      return parse_error (ctx, "Missing closing bracket");
     }
+    start = host_end + 1;
+  }
   else
-    {
-      host_end = host_start = start;
-      while (host_end < end && *host_end != PORT_SEPARATOR)
-	++host_end;
-      start = host_end;
-    }
+  {
+    host_end = host_start = start;
+    while (host_end < end && *host_end != PORT_SEPARATOR)
+      ++host_end;
+    start = host_end;
+  }
 
   /* extract the port part */
   if (*start == PORT_SEPARATOR)
+  {
+    const char *port_start, *port_end;
+
+    ++start;
+    port_end = port_start = start;
+    while (port_end < end && *port_end != FREQ_SEPARATOR)
+      ++port_end;
+    if (port_end < end)
     {
-      const char *port_start, *port_end;
+      const char *freq_start, *freq_end;
+      freq_end = freq_start = port_end + 1;
 
-      ++start;
-      port_end = port_start = start;
-      while (port_end < end && *port_end != FREQ_SEPARATOR)
-	++port_end;
-      if (port_end < end)
+      /* extract the frequency part */
+      while (freq_end < end && *freq_end != TTL_SEPARATOR)
+	++freq_end;
+
+      if (freq_start < freq_end)
+      {
+	int freq;
+	char *freq_parse_end;
+
+	freq = strtol (freq_start, &freq_parse_end, 10);
+	if (freq_parse_end == freq_start || freq_parse_end != freq_end || freq < 1)
 	{
-	  const char *freq_start, *freq_end;
-	  freq_end = freq_start = port_end + 1;
-
-	  /* extract the frequency part */
-	  while (freq_end < end && *freq_end != TTL_SEPARATOR)
-	    ++freq_end;
-
-	  if (freq_start < freq_end)
-	    {
-	      int freq;
-	      char *freq_parse_end;
-
-	      freq = strtol (freq_start, &freq_parse_end, 10);
-	      if (freq_parse_end == freq_start
-		  || freq_parse_end != freq_end
-		  || freq < 1)
-		{
-		  return parse_error (ctx, "Illegal frequency .*s",
-				      freq_end-freq_start, freq_start);
-		}
-	      else
-		{
-		  receiverp->freq = freq;
-		}
-	    }
-	  if (freq_end < end)
-	    {
-	      int ttl;
-	      const char *ttl_start = freq_end + 1;
-	      const char *ttl_end = end;
-	      char *ttl_parse_end;
-
-	      ttl = strtol (ttl_start, &ttl_parse_end, 10);
-	      if (ttl_parse_end == ttl_start
-		  || ttl_parse_end != ttl_end
-		  || ttl < 1 || ttl > 255)
-		{
-		  return parse_error (ctx, "Illegal TTL");
-		}
-	      else
-		{
-		  receiverp->ttl = ttl;
-		}
-	    }
+	  return parse_error (ctx, "Illegal frequency .*s", freq_end - freq_start, freq_start);
 	}
-      if (port_end - port_start >= NI_MAXSERV)
+	else
 	{
-	  return parse_error (ctx, "Service name/port number (%.*s) too long",
-			      port_end-port_start, port_start);
+	  receiverp->freq = freq;
 	}
-      strncpy (portspec, port_start, port_end-port_start);
-      portspec[port_end-port_start] = 0;
+      }
+      if (freq_end < end)
+      {
+	int ttl;
+	const char *ttl_start = freq_end + 1;
+	const char *ttl_end = end;
+	char *ttl_parse_end;
+
+	ttl = strtol (ttl_start, &ttl_parse_end, 10);
+	if (ttl_parse_end == ttl_start || ttl_parse_end != ttl_end || ttl < 1 || ttl > 255)
+	{
+	  return parse_error (ctx, "Illegal TTL");
+	}
+	else
+	{
+	  receiverp->ttl = ttl;
+	}
+      }
     }
+    if (port_end - port_start >= NI_MAXSERV)
+    {
+      return parse_error (ctx, "Service name/port number (%.*s) too long", port_end - port_start, port_start);
+    }
+    strncpy (portspec, port_start, port_end - port_start);
+    portspec[port_end - port_start] = 0;
+  }
   else
     strcpy (portspec, FLOWPORT);
 
@@ -638,18 +623,18 @@ parse_receiver (struct receiver *receiverp,
   {
     char *tmp_buf = copy_string_start_end (host_start, host_end);
     if (tmp_buf == 0)
-      {
-	return parse_error (ctx, "Out of memory");
-      }
+    {
+      return parse_error (ctx, "Out of memory");
+    }
     result = getaddrinfo (tmp_buf, portspec, &hints, &res);
     if (result != 0)
-      {
-	return parse_error (ctx, "Parsing IP address (%s with port spec %s) failed: %s",
-			    tmp_buf, portspec, gai_strerror (result));
-      }
+    {
+      return parse_error (ctx, "Parsing IP address (%s with port spec %s) failed: %s",
+			  tmp_buf, portspec, gai_strerror (result));
+    }
     memcpy (&receiverp->addr, res->ai_addr, res->ai_addrlen);
     receiverp->addrlen = res->ai_addrlen;
-    freeaddrinfo(res);
+    freeaddrinfo (res);
     return 0;
   }
 }
@@ -662,70 +647,70 @@ expand_port_ranges (argc, argv, exp_argc, exp_argv)
      const char ***exp_argv;
 {
   int j, k;
-  *exp_argc=0;
-  *exp_argv=NULL;
+  *exp_argc = 0;
+  *exp_argv = NULL;
 
   /* expand port definition ranges */
-  for (j=0; j<argc; j++)
+  for (j = 0; j < argc; j++)
   {
-      char *port_begin, *port_end=NULL;
-      int just_copy=0;
-      port_begin=strchr (argv[j], PORT_SEPARATOR);
-      if (port_begin==NULL)
-         just_copy=1;
+    char *port_begin, *port_end = NULL;
+    int just_copy = 0;
+    port_begin = strchr (argv[j], PORT_SEPARATOR);
+    if (port_begin == NULL)
+      just_copy = 1;
+    else
+    {
+      char *range_start = NULL, *inc_start = NULL;
+      range_start = strchr (port_begin, '-');
+      inc_start = strchr (port_begin, '+');
+      if (!range_start && !inc_start)
+	just_copy = 1;
       else
       {
-         char *range_start=NULL, *inc_start=NULL;
-         range_start=strchr (port_begin, '-');
-         inc_start=strchr (port_begin, '+');
-         if (!range_start && !inc_start)
-             just_copy=1;
-         else
-         {
-             int first=atoi (port_begin+1);
-             int last;
-             char *suffix;
-             if (range_start && inc_start)
-             {
-               fprintf (stderr, "Invalid port specification: at %s\n", port_begin);
-               exit (1);
-             }
-             if (range_start)
-             {
-                 last=atoi (range_start+1);
-                 suffix=range_start+1;
-             }
-             if (inc_start)
-             {
-                 last=first+atoi (inc_start+1)-1;
-                 suffix=inc_start+1;
-             }
-             while (*suffix && isdigit (*suffix))
-                 suffix++;
-             for (k=first;k<=last;k++)
-             {
-                 char *newarg=(char *) malloc (strlen (argv[j]+1));
-                 if (!newarg)
-                     return -1;
-                 memcpy (newarg,argv[j],port_begin-argv[j]+1);
-                 sprintf (newarg+(port_begin-argv[j])+1, "%d%s", k, suffix);
-                 *exp_argv=(const char **) realloc (*exp_argv, (1+*exp_argc)*sizeof (char *));
-                 if (*exp_argv==NULL)
-                     return -1;
-                 (*exp_argv)[*exp_argc]=newarg;
-                 *exp_argc=*exp_argc+1;
-             }
-         }
+	int first = atoi (port_begin + 1);
+	int last;
+	char *suffix;
+	if (range_start && inc_start)
+	{
+	  fprintf (stderr, "Invalid port specification: at %s\n", port_begin);
+	  exit (1);
+	}
+	if (range_start)
+	{
+	  last = atoi (range_start + 1);
+	  suffix = range_start + 1;
+	}
+	if (inc_start)
+	{
+	  last = first + atoi (inc_start + 1) - 1;
+	  suffix = inc_start + 1;
+	}
+	while (*suffix && isdigit (*suffix))
+	  suffix++;
+	for (k = first; k <= last; k++)
+	{
+	  char *newarg = (char *) malloc (strlen (argv[j] + 1));
+	  if (!newarg)
+	    return -1;
+	  memcpy (newarg, argv[j], port_begin - argv[j] + 1);
+	  sprintf (newarg + (port_begin - argv[j]) + 1, "%d%s", k, suffix);
+	  *exp_argv = (const char **) realloc (*exp_argv, (1 + *exp_argc) * sizeof (char *));
+	  if (*exp_argv == NULL)
+	    return -1;
+	  (*exp_argv)[*exp_argc] = newarg;
+	  *exp_argc = *exp_argc + 1;
+	}
       }
-      if(just_copy)
-      {
-          /* Let parse receiver handle this case */
-          *exp_argv=(const char **) realloc (*exp_argv, (1+*exp_argc)*sizeof (char *));
-          if (*exp_argv==NULL)
-              return -1;
-          (*exp_argv)[*exp_argc]=argv[j];
-          *exp_argc=*exp_argc+1;
-      }
+    }
+    if (just_copy)
+    {
+      /* Let parse receiver handle this case */
+      *exp_argv = (const char **) realloc (*exp_argv, (1 + *exp_argc) * sizeof (char *));
+      if (*exp_argv == NULL)
+	return -1;
+      (*exp_argv)[*exp_argc] = argv[j];
+      *exp_argc = *exp_argc + 1;
+    }
   }
   return 0;
 }
@@ -751,32 +736,33 @@ parse_receivers (argc, argv, ctx, sctx, source_type)
   /* allocate for argc receiver entries */
   sctx->nreceivers = exp_argc;
 
-  if (!(sctx->receivers = (struct receiver*) calloc (sctx->nreceivers, sizeof (struct receiver)))) {
+  if (!(sctx->receivers = (struct receiver *) calloc (sctx->nreceivers, sizeof (struct receiver))))
+  {
     return parse_error (ctx, "Out of memory");
   }
 
   /* no receivers */
   if (source_type != TYPE_BLACKLIST)
+  {
+    /* fill in receiver entries */
+    for (i = 0; i < exp_argc; ++i)
     {
-      /* fill in receiver entries */
-      for (i = 0; i < exp_argc; ++i)
-        {
-          if (parse_receiver (&sctx->receivers[i], exp_argv[i], ctx) != 0)
-	    return -1;
-	}
+      if (parse_receiver (&sctx->receivers[i], exp_argv[i], ctx) != 0)
+	return -1;
     }
+  }
 
   /* append to the correct source_context */
   if (ctx->sources[source_type] == NULL)
-    {
-      ctx->sources[source_type] = sctx;
-    }
+  {
+    ctx->sources[source_type] = sctx;
+  }
   else
-    {
-      struct source_context *ptr;
-      for (ptr = ctx->sources[source_type]; ptr->next != NULL; ptr = ptr->next);
-      ptr->next = sctx;
-    } 
+  {
+    struct source_context *ptr;
+    for (ptr = ctx->sources[source_type]; ptr->next != NULL; ptr = ptr->next);
+    ptr->next = sctx;
+  }
   return 0;
 }
 
@@ -814,10 +800,10 @@ parse_args (argc, argv, ctx)
   /* assume that command-line supplied receivers want to get all data */
   struct source_context *sctx = calloc (1, sizeof (struct source_context));
   if (sctx == 0)
-    {
-      fprintf (stderr, "Out of memory\n");
-      return -1;
-    }
+  {
+    fprintf (stderr, "Out of memory\n");
+    return -1;
+  }
   sctx->nreceivers = 0;
   sctx->next = (struct source_context *) NULL;
   sctx->source.ss_family = AF_INET;
@@ -827,82 +813,83 @@ parse_args (argc, argv, ctx)
   unsigned unmatched_flag = 0;
   optind = 1;
   while ((i = getopt (argc, (char **) argv, "hu:b:d:t:m:p:s:x:c:fSn46X")) != -1)
+  {
+    switch (i)
     {
-      switch (i)
-	{
-	case 'b': /* buflen */
-	  ctx->sockbuflen = atol (optarg);
-	  break;
-	case 'u': /* pdu length */
-	  ctx->pdulen = atol (optarg);
-	  break;
-	case 'd': /* debug */
-	  ctx->debug = atoi (optarg);
-	  break;
-        case 't': /* Timeout */
-         ctx->timeout = atoi (optarg);
-         break;
-	case 'n': /* no UDP checksums */
-	  ctx->default_receiver_flags &= ~pf_CHECKSUM;
-	  break;
-	case 'p': /* flow port */
-	  ctx->fport_spec = optarg;
-	  break;
-	case 'm': /* make PID file */
-	  ctx->pid_file = optarg;
-	  break;
-	case 's': /* flow address */
-	  ctx->faddr_spec = optarg;
-	  break;
-	case 'x': /* transmit delay */
-	  ctx->tx_delay = atoi (optarg);
-	  break;
-	case 'S': /* spoof */
-	  ctx->default_receiver_flags |= pf_SPOOF;
-	  break;
-	case 'c': /* config file */
-	  if (read_cf_file (optarg, ctx) != 0)
-	    {
-	      return -1;
-	    }
-	  break;
-	case 'f': /* fork */
-	  ctx->fork = 1;
-	  break;
-	case 'h': /* help */
-	  usage (argv[0]);
-	  exit (0);
-	  break;
-	case '4':
-	  ctx->ipv6_only = 0;
-	  ctx->ipv4_only = 1;
-	  break;
-	case '6':
-	  ctx->ipv4_only = 0;
-	  ctx->ipv6_only = 1;
-	  break;
-        case 'X':
-          /* uses command line receivers for unmatched sources */
-          unmatched_flag = TYPE_UNMATCHED;
-          break;
-	default:
-	  short_usage (argv[0]);
-	  return -1;
-	}
+    case 'b':			/* buflen */
+      ctx->sockbuflen = atol (optarg);
+      break;
+    case 'u':			/* pdu length */
+      ctx->pdulen = atol (optarg);
+      break;
+    case 'd':			/* debug */
+      ctx->debug = atoi (optarg);
+      break;
+    case 't':			/* Timeout */
+      ctx->timeout = atoi (optarg);
+      break;
+    case 'n':			/* no UDP checksums */
+      ctx->default_receiver_flags &= ~pf_CHECKSUM;
+      break;
+    case 'p':			/* flow port */
+      ctx->fport_spec = optarg;
+      break;
+    case 'm':			/* make PID file */
+      ctx->pid_file = optarg;
+      break;
+    case 's':			/* flow address */
+      ctx->faddr_spec = optarg;
+      break;
+    case 'x':			/* transmit delay */
+      ctx->tx_delay = atoi (optarg);
+      break;
+    case 'S':			/* spoof */
+      ctx->default_receiver_flags |= pf_SPOOF;
+      break;
+    case 'c':			/* config file */
+      if (read_cf_file (optarg, ctx) != 0)
+      {
+	return -1;
+      }
+      break;
+    case 'f':			/* fork */
+      ctx->fork = 1;
+      break;
+    case 'h':			/* help */
+      usage (argv[0]);
+      exit (0);
+      break;
+    case '4':
+      ctx->ipv6_only = 0;
+      ctx->ipv4_only = 1;
+      break;
+    case '6':
+      ctx->ipv4_only = 0;
+      ctx->ipv6_only = 1;
+      break;
+    case 'X':
+      /* uses command line receivers for unmatched sources */
+      unmatched_flag = TYPE_UNMATCHED;
+      break;
+    default:
+      short_usage (argv[0]);
+      return -1;
     }
+  }
 
   if (argc - optind > 0)
+  {
+    if (parse_receivers (argc - optind, argv + optind, ctx, sctx, unmatched_flag) == -1)
     {
-      if (parse_receivers (argc - optind, argv + optind, ctx, sctx, unmatched_flag) == -1)
-	{
-	  short_usage (argv[0]);
-	  return -1;
-	}
+      short_usage (argv[0]);
+      return -1;
     }
+  }
   return 0;
 }
 
-void short_usage (progname)
+void
+short_usage (progname)
      const char *progname;
 {
   fprintf (stderr, "Run \"%s -h\" for usage information.\n", progname);
@@ -963,10 +950,5 @@ where:\n\
 Receivers specified on the command line will get all packets unless -X is applied.\n\
 Those specified in the config-file will get only packets with a matching source.\n\
 A source in the config file without any receivers will be blacklisted.\n\
-",
-	   progname,
-	   FLOWPORT, (unsigned long) DEFAULT_SOCKBUFLEN,
-	   PORT_SEPARATOR, FREQ_SEPARATOR, TTL_SEPARATOR,
-	   FLOWPORT,
-	   DEFAULT_TTL);
+", progname, FLOWPORT, (unsigned long) DEFAULT_SOCKBUFLEN, PORT_SEPARATOR, FREQ_SEPARATOR, TTL_SEPARATOR, FLOWPORT, DEFAULT_TTL);
 }

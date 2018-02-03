@@ -37,26 +37,26 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #ifdef HAVE_ARPA_INET_H
-# include <arpa/inet.h>
+#include <arpa/inet.h>
 #endif
 #include <netdb.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #if STDC_HEADERS
-# define bzero(b,n) memset(b,0,n)
+#define bzero(b,n) memset(b,0,n)
 #else
-# include <strings.h>
-# ifndef HAVE_STRCHR
-#  define strchr index
-# endif
-# ifndef HAVE_MEMCPY
-#  define memcpy(d, s, n) bcopy ((s), (d), (n))
-#  define memmove(d, s, n) bcopy ((s), (d), (n))
-# endif
+#include <strings.h>
+#ifndef HAVE_STRCHR
+#define strchr index
+#endif
+#ifndef HAVE_MEMCPY
+#define memcpy(d, s, n) bcopy ((s), (d), (n))
+#define memmove(d, s, n) bcopy ((s), (d), (n))
+#endif
 #endif
 #ifdef HAVE_CTYPE_H
-# include <ctype.h>
+#include <ctype.h>
 #endif
 
 #include "samplicator.h"
@@ -110,38 +110,39 @@ main (int argc, char **argv)
   struct source_context *sctx;
 
   if (argc != 1)
-    {
-      fprintf (stderr, "Usage: %s\n", argv[0]);
-      exit (1);
-    }
+  {
+    fprintf (stderr, "Usage: %s\n", argv[0]);
+    exit (1);
+  }
   check_int_equal (parse_cf_string ("", &ctx), 0);
   check_int_equal (ctx.fork, 0);
   check_null (ctx.sources);
 
   check_int_equal (parse_cf_string ("1.2.3.4/30+ 6.7.8.9/1234\n", &ctx), -1);
 
-  check_int_equal (parse_cf_string ("1.2.3.4/255.255.255.252: 6.7.8.9/1234/10,237\n2.3.4.5: 7.8.9.0/4321", &ctx), 0);
+  check_int_equal (parse_cf_string
+		   ("1.2.3.4/255.255.255.252: 6.7.8.9/1234/10,237\n2.3.4.5: 7.8.9.0/4321", &ctx), 0);
   check_int_equal (ctx.fork, 0);
   if (check_non_null (sctx = ctx.sources))
+  {
+    check_source_address_mask (sctx, "1.2.3.4", "255.255.255.252", AF_INET);
+    check_int_equal (sctx->nreceivers, 1);
+    check_receiver (&sctx->receivers[0], "6.7.8.9", 1234, AF_INET, 10, 237);
+    if (check_non_null (sctx = sctx->next))
     {
-      check_source_address_mask (sctx, "1.2.3.4", "255.255.255.252", AF_INET);
+      check_source_address_mask (sctx, "2.3.4.5", "255.255.255.255", AF_INET);
       check_int_equal (sctx->nreceivers, 1);
-      check_receiver (&sctx->receivers[0], "6.7.8.9", 1234, AF_INET, 10, 237);
-      if (check_non_null (sctx = sctx->next))
-	{
-	  check_source_address_mask (sctx, "2.3.4.5", "255.255.255.255", AF_INET);
-	  check_int_equal (sctx->nreceivers, 1);
-	  check_receiver (&sctx->receivers[0], "7.8.9.0", 4321, AF_INET, 1, DEFAULT_TTL);
-	  check_null (sctx->next);
-	}
+      check_receiver (&sctx->receivers[0], "7.8.9.0", 4321, AF_INET, 1, DEFAULT_TTL);
+      check_null (sctx->next);
     }
+  }
 
   check_int_equal (parse_cf_string ("1.2.3.4/30: 6.7.8.9/1200-1210\n", &ctx), 0);
   if (check_non_null (sctx = ctx.sources))
   {
     check_int_equal (sctx->nreceivers, 11);
     check_receiver (&sctx->receivers[0], "6.7.8.9", 1200, AF_INET, 1, DEFAULT_TTL);
-    if (sctx->nreceivers==11)
+    if (sctx->nreceivers == 11)
     {
       check_receiver (&sctx->receivers[10], "6.7.8.9", 1210, AF_INET, 1, DEFAULT_TTL);
     }
@@ -151,7 +152,7 @@ main (int argc, char **argv)
   {
     check_int_equal (sctx->nreceivers, 10);
     check_receiver (&sctx->receivers[0], "6.7.8.9", 1200, AF_INET, 1, DEFAULT_TTL);
-    if (sctx->nreceivers==10)
+    if (sctx->nreceivers == 10)
     {
       check_receiver (&sctx->receivers[9], "6.7.8.9", 1209, AF_INET, 1, DEFAULT_TTL);
     }
@@ -160,72 +161,71 @@ main (int argc, char **argv)
   check_int_equal (parse_cf_string ("1.2.3.4/30: 6.7.8.9/1234\n2.3.4.5: 7.8.9.0/4321", &ctx), 0);
   check_int_equal (ctx.fork, 0);
   if (check_non_null (sctx = ctx.sources))
+  {
+    check_source_address_mask (sctx, "1.2.3.4", "255.255.255.252", AF_INET);
+    check_int_equal (sctx->nreceivers, 1);
+    check_receiver (&sctx->receivers[0], "6.7.8.9", 1234, AF_INET, 1, DEFAULT_TTL);
+    if (check_non_null (sctx = sctx->next))
     {
-      check_source_address_mask (sctx, "1.2.3.4", "255.255.255.252", AF_INET);
+      check_source_address_mask (sctx, "2.3.4.5", "255.255.255.255", AF_INET);
       check_int_equal (sctx->nreceivers, 1);
-      check_receiver (&sctx->receivers[0], "6.7.8.9", 1234, AF_INET, 1, DEFAULT_TTL);
-      if (check_non_null (sctx = sctx->next))
-	{
-	  check_source_address_mask (sctx, "2.3.4.5", "255.255.255.255", AF_INET);
-	  check_int_equal (sctx->nreceivers, 1);
-	  check_receiver (&sctx->receivers[0], "7.8.9.0", 4321, AF_INET, 1, DEFAULT_TTL);
-	  check_null (sctx->next);
-	}
+      check_receiver (&sctx->receivers[0], "7.8.9.0", 4321, AF_INET, 1, DEFAULT_TTL);
+      check_null (sctx->next);
     }
+  }
 
 #ifdef NOTYET
   check_int_equal (parse_cf_string ("1.2.3.4/30: localhost/1234", &ctx), 0);
   check_int_equal (ctx.fork, 0);
   if (check_non_null (sctx = ctx.sources))
-    {
-      check_source_address_mask (sctx, "1.2.3.4", "255.255.255.252", AF_INET);
-      check_int_equal (sctx->nreceivers, 1);
-      check_receiver (&sctx->receivers[0], "127.0.0.1", 1234, AF_INET, 1, DEFAULT_TTL);
-    }
+  {
+    check_source_address_mask (sctx, "1.2.3.4", "255.255.255.252", AF_INET);
+    check_int_equal (sctx->nreceivers, 1);
+    check_receiver (&sctx->receivers[0], "127.0.0.1", 1234, AF_INET, 1, DEFAULT_TTL);
+  }
 #endif
 
   check_int_equal (parse_cf_string ("1.2.3.4/30: ip6-localhost/1234", &ctx), 0);
   check_int_equal (ctx.fork, 0);
   if (check_non_null (sctx = ctx.sources))
-    {
-      check_source_address_mask (sctx, "1.2.3.4", "255.255.255.252", AF_INET);
-      check_int_equal (sctx->nreceivers, 1);
-      check_receiver (&sctx->receivers[0], "::1", 1234, AF_INET6, 1, DEFAULT_TTL);
-    }
+  {
+    check_source_address_mask (sctx, "1.2.3.4", "255.255.255.252", AF_INET);
+    check_int_equal (sctx->nreceivers, 1);
+    check_receiver (&sctx->receivers[0], "::1", 1234, AF_INET6, 1, DEFAULT_TTL);
+  }
 
   check_int_equal (parse_cf_string ("[0::0]/0: [2001:db8:0::1]/1234/10,34\n", &ctx), 0);
   check_int_equal (ctx.fork, 0);
   sctx = ctx.sources;
   if (check_non_null (sctx))
-    {
-      check_source_address_mask (sctx, "::", "::", AF_INET6);
-      check_int_equal (sctx->nreceivers, 1);
-      check_receiver (&sctx->receivers[0], "2001:db8:0::1", 1234, AF_INET6, 10, 34);
-      check_null (sctx->next);
-    }
+  {
+    check_source_address_mask (sctx, "::", "::", AF_INET6);
+    check_int_equal (sctx->nreceivers, 1);
+    check_receiver (&sctx->receivers[0], "2001:db8:0::1", 1234, AF_INET6, 10, 34);
+    check_null (sctx->next);
+  }
 
   check_int_equal (parse_cf_string ("[0::0]/0: [2001:db8:0::1]/1234/10,34\n", &ctx), 0);
   check_int_equal (ctx.fork, 0);
   sctx = ctx.sources;
   if (check_non_null (sctx))
-    {
-      check_source_address_mask (sctx, "::", "::", AF_INET6);
-      check_int_equal (sctx->nreceivers, 1);
-      check_receiver (&sctx->receivers[0], "2001:db8:0::1", 1234, AF_INET6, 10, 34);
-      check_null (sctx->next);
-    }
+  {
+    check_source_address_mask (sctx, "::", "::", AF_INET6);
+    check_int_equal (sctx->nreceivers, 1);
+    check_receiver (&sctx->receivers[0], "2001:db8:0::1", 1234, AF_INET6, 10, 34);
+    check_null (sctx->next);
+  }
 
   check_int_equal (parse_cf_string ("[2001:db8:0:4::]: [2001:db8:0::1]\n", &ctx), 0);
   check_int_equal (ctx.fork, 0);
   sctx = ctx.sources;
   if (check_non_null (sctx))
-    {
-      check_source_address_mask
-	(sctx, "2001:db8:0:4::", "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", AF_INET6);
-      check_int_equal (sctx->nreceivers, 1);
-      check_receiver (&sctx->receivers[0], "2001:db8:0::1", 2000, AF_INET6, 1, DEFAULT_TTL);
-      check_null (sctx->next);
-    }
+  {
+    check_source_address_mask (sctx, "2001:db8:0:4::", "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", AF_INET6);
+    check_int_equal (sctx->nreceivers, 1);
+    check_receiver (&sctx->receivers[0], "2001:db8:0::1", 2000, AF_INET6, 1, DEFAULT_TTL);
+    check_null (sctx->next);
+  }
 #ifdef NOTYET
 #endif
   return 0;
@@ -245,31 +245,25 @@ parse_cf_string (s, ctx)
   unlink (test_file_name);
   fp = fopen (test_file_name, "w");
   if (fp == (FILE *) 0)
-    {
-      fprintf (stderr, "Could not create test file %s: %s",
-	       test_file_name,
-	       strerror (errno));
-      return -1;
-    }
+  {
+    fprintf (stderr, "Could not create test file %s: %s", test_file_name, strerror (errno));
+    return -1;
+  }
   if (fputs (s, fp) == EOF)
-    {
-      fprintf (stderr, "Error writing to test file %s: %s",
-	       test_file_name,
-	       strerror (errno));
-      return -1;
-    }
+  {
+    fprintf (stderr, "Error writing to test file %s: %s", test_file_name, strerror (errno));
+    return -1;
+  }
   if (fclose (fp) != 0)
-    {
-      fprintf (stderr, "Error closing test file %s: %s",
-	       test_file_name,
-	       strerror (errno));
-      return -1;
-    }
+  {
+    fprintf (stderr, "Error closing test file %s: %s", test_file_name, strerror (errno));
+    return -1;
+  }
   ap = &args[0];
   *ap++ = "parsetest";
   *ap++ = "-c";
   *ap++ = test_file_name;
-  n_args = ap-args;
+  n_args = ap - args;
   *ap++ = (char *) 0;
   return parse_args (n_args, args, ctx);
 }
@@ -280,27 +274,27 @@ check_int_equal (is, should)
      int should;
 {
   if (is == should)
-    {
-      return test_ok ();
-    }
+  {
+    return test_ok ();
+  }
   else
-    {
-      return test_fail ();
-    }
+  {
+    return test_fail ();
+  }
 }
 
 static int
 check_non_null (ptr)
      const void *ptr;
 {
-  return  check_int_equal (ptr == 0, 0);
+  return check_int_equal (ptr == 0, 0);
 }
 
 static int
 check_null (ptr)
      const void *ptr;
 {
-  return  check_int_equal (ptr == 0, 1);
+  return check_int_equal (ptr == 0, 1);
 }
 
 static int
@@ -313,23 +307,23 @@ check_sockaddrs_equal (sa1_generic, sa2_generic)
   if (sa1_generic->sa_family != sa2_generic->sa_family)
     return test_fail ();
   if (sa1_generic->sa_family == AF_INET)
-    {
-      SPECIALIZE(sa1, sockaddr_in);
-      SPECIALIZE(sa2, sockaddr_in);
-      check_int_equal (sa1->sin_port, sa2->sin_port);
-      if (memcmp (&sa1->sin_addr, &sa2->sin_addr, sizeof (struct in_addr)) != 0)
-	return test_fail ();
-      return test_ok ();
-    }
+  {
+    SPECIALIZE (sa1, sockaddr_in);
+    SPECIALIZE (sa2, sockaddr_in);
+    check_int_equal (sa1->sin_port, sa2->sin_port);
+    if (memcmp (&sa1->sin_addr, &sa2->sin_addr, sizeof (struct in_addr)) != 0)
+      return test_fail ();
+    return test_ok ();
+  }
   else if (sa1_generic->sa_family == AF_INET6)
-    {
-      SPECIALIZE(sa1, sockaddr_in6);
-      SPECIALIZE(sa2, sockaddr_in6);
-      check_int_equal (sa1->sin6_port, sa2->sin6_port);
-      if (memcmp (&sa1->sin6_addr, &sa2->sin6_addr, sizeof (struct in6_addr)) != 0)
-	return test_fail ();
-      return test_ok ();
-    }
+  {
+    SPECIALIZE (sa1, sockaddr_in6);
+    SPECIALIZE (sa2, sockaddr_in6);
+    check_int_equal (sa1->sin6_port, sa2->sin6_port);
+    if (memcmp (&sa1->sin6_addr, &sa2->sin6_addr, sizeof (struct in6_addr)) != 0)
+      return test_fail ();
+    return test_ok ();
+  }
   else
     return test_fail ();
 #undef SPECIALIZE

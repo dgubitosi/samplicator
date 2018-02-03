@@ -25,11 +25,10 @@ main (int argc, char **argv)
   int s;
 
   if ((s = make_raw_udp_socket (0, AF_INET)) == -1)
-    {
-      fprintf (stderr, "socket: %s\n",
-	       strerror (errno));
-      exit (1);
-    }
+  {
+    fprintf (stderr, "socket: %s\n", strerror (errno));
+    exit (1);
+  }
   {
     char msg[MAX_IP_DATAGRAM_SIZE];
     int msglen = 1000;
@@ -46,15 +45,12 @@ main (int argc, char **argv)
       int ttl = 64;
       int checksum_p = RAWSEND_COMPUTE_UDP_CHECKSUM;
 
-      if (raw_send_from_to (s, & msg, msglen,
-			    (struct sockaddr *) &here,
-			    (struct sockaddr *) &dest,
-			    ttl, checksum_p) == -1)
-	{
-	  fprintf (stderr, "sending failed: %s\n",
-		   strerror (errno));
-	  exit (1);
-	}
+      if (raw_send_from_to (s, &msg, msglen,
+			    (struct sockaddr *) &here, (struct sockaddr *) &dest, ttl, checksum_p) == -1)
+      {
+	fprintf (stderr, "sending failed: %s\n", strerror (errno));
+	exit (1);
+      }
     }
   }
   return 0;

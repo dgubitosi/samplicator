@@ -12,14 +12,14 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #ifdef HAVE_ARPA_INET_H
-# include <arpa/inet.h>
+#include <arpa/inet.h>
 #endif
 #include <string.h>
 #include <errno.h>
 #if STDC_HEADERS
-# define bzero(b,n) memset(b,0,n)
+#define bzero(b,n) memset(b,0,n)
 #else
-# include <strings.h>
+#include <strings.h>
 #endif
 
 #include "samplicator.h"
@@ -31,18 +31,18 @@ init_hints_from_preferences (hints, ctx)
      const struct samplicator_context *ctx;
 {
   bzero (hints, sizeof *hints);
-  hints->ai_flags = AI_PASSIVE|AI_ADDRCONFIG;
+  hints->ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
   hints->ai_socktype = SOCK_DGRAM;
   if (ctx->ipv4_only)
-    {
-      hints->ai_family = AF_INET;
-    }
+  {
+    hints->ai_family = AF_INET;
+  }
   else if (ctx->ipv6_only)
-    {
-      hints->ai_family = AF_INET6;
-    }
+  {
+    hints->ai_family = AF_INET6;
+  }
   else
-    {
-      hints->ai_family = AF_UNSPEC;
-    }
+  {
+    hints->ai_family = AF_UNSPEC;
+  }
 }
