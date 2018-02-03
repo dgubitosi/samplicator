@@ -121,7 +121,7 @@ main (int argc, char **argv)
   check_int_equal (parse_cf_string ("1.2.3.4/30+ 6.7.8.9/1234\n", &ctx), -1);
 
   check_int_equal (parse_cf_string
-		   ("1.2.3.4/255.255.255.252: 6.7.8.9/1234/10,237\n2.3.4.5: 7.8.9.0/4321", &ctx), 0);
+                   ("1.2.3.4/255.255.255.252: 6.7.8.9/1234/10,237\n2.3.4.5: 7.8.9.0/4321", &ctx), 0);
   check_int_equal (ctx.fork, 0);
   if (check_non_null (sctx = ctx.sources))
   {

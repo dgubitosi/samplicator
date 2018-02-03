@@ -7,5 +7,5 @@
 
 extern int read_cf_file (const char *, struct samplicator_context *);
 extern int parse_receivers (int, const char **, struct samplicator_context *, struct source_context *,
-			    unsigned);
+                            unsigned);
 extern int parse_args (int, const char **, struct samplicator_context *);

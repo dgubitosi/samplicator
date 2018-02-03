@@ -55,8 +55,8 @@
 
 static int parse_line (struct samplicator_context *, char *, const char *);
 static int parse_addr_mask (const char *, const char *,
-			    const struct samplicator_context *,
-			    struct sockaddr_storage *, struct sockaddr_storage *, socklen_t *);
+                            const struct samplicator_context *,
+                            struct sockaddr_storage *, struct sockaddr_storage *, socklen_t *);
 static void short_usage (const char *);
 static void usage (const char *);
 
@@ -165,7 +165,7 @@ read_cf_file (file, ctx)
  */
 static int
 resolve_addr (const char *addrstring,
-	      const struct samplicator_context *ctx, struct sockaddr_storage *addrp, socklen_t * addrlenp)
+              const struct samplicator_context *ctx, struct sockaddr_storage *addrp, socklen_t * addrlenp)
 {
   struct addrinfo hints, *res;
 
@@ -184,8 +184,8 @@ resolve_addr (const char *addrstring,
 
 static int
 parse_addr_1 (const char *start,
-	      const char *end,
-	      const struct samplicator_context *ctx, struct sockaddr_storage *addrp, socklen_t * addrlenp)
+              const char *end,
+              const struct samplicator_context *ctx, struct sockaddr_storage *addrp, socklen_t * addrlenp)
 {
   char *copy = copy_string_start_end (start, end);
   int result;
@@ -201,8 +201,8 @@ parse_addr_1 (const char *start,
 
 static int
 parse_addr (const char *start,
-	    const char *end,
-	    const struct samplicator_context *ctx, struct sockaddr_storage *addrp, socklen_t * addrlenp)
+            const char *end,
+            const struct samplicator_context *ctx, struct sockaddr_storage *addrp, socklen_t * addrlenp)
 {
   while (start < end && isspace (*start))
     ++start;
@@ -259,39 +259,39 @@ set_ipv6_netmask (struct sockaddr_in6 *maskp, int preflen)
 
 static int
 parse_mask (const char *start,
-	    const char *end,
-	    const struct samplicator_context *ctx,
-	    struct sockaddr_storage *maskp, struct sockaddr_storage *addrp)
+            const char *end,
+            const struct samplicator_context *ctx,
+            struct sockaddr_storage *maskp, struct sockaddr_storage *addrp)
 {
   if (addrp->ss_family == AF_INET)
   {
     const char *cp = start;
     while (cp < end && *cp != '.')
       ++cp;
-    if (cp < end)		/* contains a dot, assume full netmask */
+    if (cp < end)               /* contains a dot, assume full netmask */
     {
       socklen_t addrlen1;
       if (parse_addr_1 (start, end, ctx, maskp, &addrlen1) != 0)
       {
-	return parse_error (ctx, "Cannot parse mask");
+        return parse_error (ctx, "Cannot parse mask");
       }
       else
       {
-	if (addrlen1 != sizeof (struct sockaddr_in))
-	{
-	  return parse_error (ctx, "Inconsistent addr/mask structures");
-	}
-	return 0;
+        if (addrlen1 != sizeof (struct sockaddr_in))
+        {
+          return parse_error (ctx, "Inconsistent addr/mask structures");
+        }
+        return 0;
       }
     }
     else
-    {				/* no dot, assume this is a prefix length */
+    {                           /* no dot, assume this is a prefix length */
       int preflen;
       char *int_end;
       preflen = strtol (start, &int_end, 10);
       if (int_end == start || int_end < end || preflen < 0 || preflen > 32)
       {
-	return parse_error (ctx, "Bogus prefix length");
+        return parse_error (ctx, "Bogus prefix length");
       }
       bzero (maskp, sizeof (struct sockaddr_in));
       ((struct sockaddr_in *) maskp)->sin_family = AF_INET;
@@ -321,7 +321,7 @@ parse_mask (const char *start,
 
 static int
 set_default_mask (const struct samplicator_context *ctx,
-		  struct sockaddr_storage *maskp, struct sockaddr_storage *addrp)
+                  struct sockaddr_storage *maskp, struct sockaddr_storage *addrp)
 {
   if (addrp->ss_family == AF_INET)
   {
@@ -429,7 +429,7 @@ parse_line (ctx, start, end)
   while (end > start && isspace (*(end - 1)))
     --end;
   if (start == end)
-    return 0;			/* empty line; skip. */
+    return 0;                   /* empty line; skip. */
 
   /* non-empty lines should look like this:
 
@@ -468,7 +468,7 @@ parse_line (ctx, start, end)
   if (c < end)
   {
     lhs_end = c;
-    ++c;			/* skip colon */
+    ++c;                        /* skip colon */
     while (c < end && isspace (*c))
       ++c;
     rhs_start = c;
@@ -476,7 +476,7 @@ parse_line (ctx, start, end)
     sctx = calloc (1, sizeof (struct source_context));
 
     int ret = parse_addr_mask (lhs_start, lhs_end, ctx,
-			       &sctx->source, &sctx->mask, &sctx->addrlen);
+                               &sctx->source, &sctx->mask, &sctx->addrlen);
     if (ret < 0)
       return -1;
 
@@ -484,16 +484,16 @@ parse_line (ctx, start, end)
     while (c < end)
     {
       while (c < end && isspace (*c))
-	c++;
+        c++;
       if (c >= end)
-	break;
+        break;
       e = c;
       while ((*e != 0) && !isspace ((int) *e))
-	e++;
+        e++;
       argv[argc++] = copy_string_start_end (c, e);
       c = e;
       if (c < end)
-	c++;
+        c++;
     }
 
     /*
@@ -574,39 +574,39 @@ parse_receiver (struct receiver *receiverp, const char *arg, struct samplicator_
 
       /* extract the frequency part */
       while (freq_end < end && *freq_end != TTL_SEPARATOR)
-	++freq_end;
+        ++freq_end;
 
       if (freq_start < freq_end)
       {
-	int freq;
-	char *freq_parse_end;
+        int freq;
+        char *freq_parse_end;
 
-	freq = strtol (freq_start, &freq_parse_end, 10);
-	if (freq_parse_end == freq_start || freq_parse_end != freq_end || freq < 1)
-	{
-	  return parse_error (ctx, "Illegal frequency .*s", freq_end - freq_start, freq_start);
-	}
-	else
-	{
-	  receiverp->freq = freq;
-	}
+        freq = strtol (freq_start, &freq_parse_end, 10);
+        if (freq_parse_end == freq_start || freq_parse_end != freq_end || freq < 1)
+        {
+          return parse_error (ctx, "Illegal frequency .*s", freq_end - freq_start, freq_start);
+        }
+        else
+        {
+          receiverp->freq = freq;
+        }
       }
       if (freq_end < end)
       {
-	int ttl;
-	const char *ttl_start = freq_end + 1;
-	const char *ttl_end = end;
-	char *ttl_parse_end;
+        int ttl;
+        const char *ttl_start = freq_end + 1;
+        const char *ttl_end = end;
+        char *ttl_parse_end;
 
-	ttl = strtol (ttl_start, &ttl_parse_end, 10);
-	if (ttl_parse_end == ttl_start || ttl_parse_end != ttl_end || ttl < 1 || ttl > 255)
-	{
-	  return parse_error (ctx, "Illegal TTL");
-	}
-	else
-	{
-	  receiverp->ttl = ttl;
-	}
+        ttl = strtol (ttl_start, &ttl_parse_end, 10);
+        if (ttl_parse_end == ttl_start || ttl_parse_end != ttl_end || ttl < 1 || ttl > 255)
+        {
+          return parse_error (ctx, "Illegal TTL");
+        }
+        else
+        {
+          receiverp->ttl = ttl;
+        }
       }
     }
     if (port_end - port_start >= NI_MAXSERV)
@@ -630,7 +630,7 @@ parse_receiver (struct receiver *receiverp, const char *arg, struct samplicator_
     if (result != 0)
     {
       return parse_error (ctx, "Parsing IP address (%s with port spec %s) failed: %s",
-			  tmp_buf, portspec, gai_strerror (result));
+                          tmp_buf, portspec, gai_strerror (result));
     }
     memcpy (&receiverp->addr, res->ai_addr, res->ai_addrlen);
     receiverp->addrlen = res->ai_addrlen;
@@ -664,42 +664,42 @@ expand_port_ranges (argc, argv, exp_argc, exp_argv)
       range_start = strchr (port_begin, '-');
       inc_start = strchr (port_begin, '+');
       if (!range_start && !inc_start)
-	just_copy = 1;
+        just_copy = 1;
       else
       {
-	int first = atoi (port_begin + 1);
-	int last;
-	char *suffix;
-	if (range_start && inc_start)
-	{
-	  fprintf (stderr, "Invalid port specification: at %s\n", port_begin);
-	  exit (1);
-	}
-	if (range_start)
-	{
-	  last = atoi (range_start + 1);
-	  suffix = range_start + 1;
-	}
-	if (inc_start)
-	{
-	  last = first + atoi (inc_start + 1) - 1;
-	  suffix = inc_start + 1;
-	}
-	while (*suffix && isdigit (*suffix))
-	  suffix++;
-	for (k = first; k <= last; k++)
-	{
-	  char *newarg = (char *) malloc (strlen (argv[j] + 1));
-	  if (!newarg)
-	    return -1;
-	  memcpy (newarg, argv[j], port_begin - argv[j] + 1);
-	  sprintf (newarg + (port_begin - argv[j]) + 1, "%d%s", k, suffix);
-	  *exp_argv = (const char **) realloc (*exp_argv, (1 + *exp_argc) * sizeof (char *));
-	  if (*exp_argv == NULL)
-	    return -1;
-	  (*exp_argv)[*exp_argc] = newarg;
-	  *exp_argc = *exp_argc + 1;
-	}
+        int first = atoi (port_begin + 1);
+        int last;
+        char *suffix;
+        if (range_start && inc_start)
+        {
+          fprintf (stderr, "Invalid port specification: at %s\n", port_begin);
+          exit (1);
+        }
+        if (range_start)
+        {
+          last = atoi (range_start + 1);
+          suffix = range_start + 1;
+        }
+        if (inc_start)
+        {
+          last = first + atoi (inc_start + 1) - 1;
+          suffix = inc_start + 1;
+        }
+        while (*suffix && isdigit (*suffix))
+          suffix++;
+        for (k = first; k <= last; k++)
+        {
+          char *newarg = (char *) malloc (strlen (argv[j] + 1));
+          if (!newarg)
+            return -1;
+          memcpy (newarg, argv[j], port_begin - argv[j] + 1);
+          sprintf (newarg + (port_begin - argv[j]) + 1, "%d%s", k, suffix);
+          *exp_argv = (const char **) realloc (*exp_argv, (1 + *exp_argc) * sizeof (char *));
+          if (*exp_argv == NULL)
+            return -1;
+          (*exp_argv)[*exp_argc] = newarg;
+          *exp_argc = *exp_argc + 1;
+        }
       }
     }
     if (just_copy)
@@ -707,7 +707,7 @@ expand_port_ranges (argc, argv, exp_argc, exp_argv)
       /* Let parse receiver handle this case */
       *exp_argv = (const char **) realloc (*exp_argv, (1 + *exp_argc) * sizeof (char *));
       if (*exp_argv == NULL)
-	return -1;
+        return -1;
       (*exp_argv)[*exp_argc] = argv[j];
       *exp_argc = *exp_argc + 1;
     }
@@ -748,7 +748,7 @@ parse_receivers (argc, argv, ctx, sctx, source_type)
     for (i = 0; i < exp_argc; ++i)
     {
       if (parse_receiver (&sctx->receivers[i], exp_argv[i], ctx) != 0)
-	return -1;
+        return -1;
     }
   }
 
@@ -816,46 +816,46 @@ parse_args (argc, argv, ctx)
   {
     switch (i)
     {
-    case 'b':			/* buflen */
+    case 'b':                  /* buflen */
       ctx->sockbuflen = atol (optarg);
       break;
-    case 'u':			/* pdu length */
+    case 'u':                  /* pdu length */
       ctx->pdulen = atol (optarg);
       break;
-    case 'd':			/* debug */
+    case 'd':                  /* debug */
       ctx->debug = atoi (optarg);
       break;
-    case 't':			/* Timeout */
+    case 't':                  /* Timeout */
       ctx->timeout = atoi (optarg);
       break;
-    case 'n':			/* no UDP checksums */
+    case 'n':                  /* no UDP checksums */
       ctx->default_receiver_flags &= ~pf_CHECKSUM;
       break;
-    case 'p':			/* flow port */
+    case 'p':                  /* flow port */
       ctx->fport_spec = optarg;
       break;
-    case 'm':			/* make PID file */
+    case 'm':                  /* make PID file */
       ctx->pid_file = optarg;
       break;
-    case 's':			/* flow address */
+    case 's':                  /* flow address */
       ctx->faddr_spec = optarg;
       break;
-    case 'x':			/* transmit delay */
+    case 'x':                  /* transmit delay */
       ctx->tx_delay = atoi (optarg);
       break;
-    case 'S':			/* spoof */
+    case 'S':                  /* spoof */
       ctx->default_receiver_flags |= pf_SPOOF;
       break;
-    case 'c':			/* config file */
+    case 'c':                  /* config file */
       if (read_cf_file (optarg, ctx) != 0)
       {
-	return -1;
+        return -1;
       }
       break;
-    case 'f':			/* fork */
+    case 'f':                  /* fork */
       ctx->fork = 1;
       break;
-    case 'h':			/* help */
+    case 'h':                  /* help */
       usage (argv[0]);
       exit (0);
       break;

@@ -40,7 +40,7 @@ inet_aton_1 (const char *start, const char *end, struct in_addr *out)
     for (n = 0; s < end && *s != '.'; ++s)
     {
       if (*s < '0' || *s > '9')
-	return 0;
+        return 0;
       n = n * 10 + (*s - '0');
     }
   }
@@ -55,21 +55,21 @@ inet_aton_1 (const char *start, const char *end, struct in_addr *out)
       break;
     case 2:
       if (component[0] > 255 || component[1] > 16777215)
-	return 0;
+        return 0;
       addr = component[0] << 24 | component[1];
       break;
     case 3:
       if (component[0] > 255 || component[1] > 255 || component[2] > 65535)
-	return 0;
+        return 0;
       addr = component[0] << 24 | component[1] << 16 | component[2];
       break;
     case 4:
       for (k = 0; k < 4; ++k)
       {
-	if (component[k] > 255)
-	  return 0;
-	addr <<= 8;
-	addr |= component[k];
+        if (component[k] > 255)
+          return 0;
+        addr <<= 8;
+        addr |= component[k];
       }
       break;
     default:

@@ -46,10 +46,10 @@ main (int argc, char **argv)
       int checksum_p = RAWSEND_COMPUTE_UDP_CHECKSUM;
 
       if (raw_send_from_to (s, &msg, msglen,
-			    (struct sockaddr *) &here, (struct sockaddr *) &dest, ttl, checksum_p) == -1)
+                            (struct sockaddr *) &here, (struct sockaddr *) &dest, ttl, checksum_p) == -1)
       {
-	fprintf (stderr, "sending failed: %s\n", strerror (errno));
-	exit (1);
+        fprintf (stderr, "sending failed: %s\n", strerror (errno));
+        exit (1);
       }
     }
   }

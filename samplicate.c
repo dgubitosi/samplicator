@@ -58,7 +58,7 @@ main (argc, argv)
   }
   if (init_samplicator (&ctx) == -1)
     exit (1);
-  if (samplicate (&ctx) != 0)	/* actually, samplicate() should never return. */
+  if (samplicate (&ctx) != 0)   /* actually, samplicate() should never return. */
     exit (1);
   exit (0);
 }
@@ -75,11 +75,11 @@ daemonize (void)
     exit (1);
   }
   else if (pid > 0)
-  {				/* kill the parent */
+  {                             /* kill the parent */
     exit (0);
   }
   else
-  {				/* end interaction with shell */
+  {                             /* end interaction with shell */
     fclose (stdin);
     fclose (stdout);
     fclose (stderr);
@@ -92,7 +92,7 @@ write_pid_file (const char *filename)
 {
   FILE *fp;
 
-  unlink (filename);		/* Ignore results - the old file may not exist. */
+  unlink (filename);            /* Ignore results - the old file may not exist. */
   if ((fp = fopen (filename, "w")) == 0)
   {
     fprintf (stderr, "Failed to create PID file %s: %s\n", filename, strerror (errno));
@@ -170,7 +170,7 @@ make_recv_socket (ctx)
   if ((result = getaddrinfo (ctx->faddr_spec, ctx->fport_spec, &hints, &res)) != 0)
   {
     fprintf (stderr, "Failed to resolve IP address/port (%s:%s): %s\n",
-	     ctx->faddr_spec, ctx->fport_spec, gai_strerror (result));
+             ctx->faddr_spec, ctx->fport_spec, gai_strerror (result));
     return -1;
   }
   for (; res; res = res->ai_next)
@@ -181,7 +181,7 @@ make_recv_socket (ctx)
       break;
     }
     if (setsockopt (ctx->fsockfd, SOL_SOCKET, SO_RCVBUF,
-		    (char *) &ctx->sockbuflen, sizeof ctx->sockbuflen) == -1)
+                    (char *) &ctx->sockbuflen, sizeof ctx->sockbuflen) == -1)
     {
       fprintf (stderr, "Warning: setsockopt(SO_RCVBUF,%ld) failed: %s\n", ctx->sockbuflen, strerror (errno));
     }
@@ -258,7 +258,7 @@ match_addr_p (struct sockaddr *input_generic, struct sockaddr *addr_generic, str
     {
       SPECIALIZE (input, sockaddr_in);
       if ((input->sin_addr.s_addr & mask->sin_addr.s_addr) == addr->sin_addr.s_addr)
-	return 1;
+        return 1;
       return 0;
     }
     else if (input_generic->sa_family == AF_INET6)
@@ -266,15 +266,15 @@ match_addr_p (struct sockaddr *input_generic, struct sockaddr *addr_generic, str
       SPECIALIZE (input, sockaddr_in6);
       if (IN6_IS_ADDR_V4MAPPED (&input->sin6_addr))
       {
-	abort ();		/* TODO */
+        abort ();               /* TODO */
       }
       else
       {
-	return 0;
+        return 0;
       }
     }
     else
-      abort ();			/* Unexpected address family */
+      abort ();                 /* Unexpected address family */
   }
   else
   {
@@ -295,16 +295,16 @@ match_addr_p (struct sockaddr *input_generic, struct sockaddr *addr_generic, str
       unsigned k;
       for (k = 0; k < 16; ++k)
       {
-	if ((input->sin6_addr.s6_addr[k] & mask->sin6_addr.s6_addr[k]) != addr->sin6_addr.s6_addr[k])
-	{
-	  return 0;
-	}
-	return 1;
+        if ((input->sin6_addr.s6_addr[k] & mask->sin6_addr.s6_addr[k]) != addr->sin6_addr.s6_addr[k])
+        {
+          return 0;
+        }
+        return 1;
       }
       abort ();
     }
     else
-      abort ();			/* Unexpected address family */
+      abort ();                 /* Unexpected address family */
   }
 #undef SPECIALIZE
 }
@@ -332,14 +332,14 @@ samplicate (ctx)
       int rc = poll (fds, 1, ctx->timeout);
       if (!rc)
       {
-	fprintf (stderr, "Timeout, no data received in %d milliseconds.\n", ctx->timeout);
-	exit (5);
+        fprintf (stderr, "Timeout, no data received in %d milliseconds.\n", ctx->timeout);
+        exit (5);
       }
     }
 
     addrlen = sizeof remote_address;
     if ((n = recvfrom (ctx->fsockfd, (char *) fpdu,
-		       sizeof (fpdu), MSG_TRUNC, (struct sockaddr *) &remote_address, &addrlen)) == -1)
+                       sizeof (fpdu), MSG_TRUNC, (struct sockaddr *) &remote_address, &addrlen)) == -1)
     {
       fprintf (stderr, "recvfrom(): %s\n", strerror (errno));
       exit (1);
@@ -352,16 +352,16 @@ samplicate (ctx)
     if (addrlen != ctx->fsockaddrlen)
     {
       fprintf (stderr, "recvfrom() return address length %lu - expected %lu\n",
-	       (unsigned long) addrlen, (unsigned long) ctx->fsockaddrlen);
+               (unsigned long) addrlen, (unsigned long) ctx->fsockaddrlen);
       exit (1);
     }
     if (ctx->debug)
     {
       if (getnameinfo ((struct sockaddr *) &remote_address, addrlen,
-		       host, INET6_ADDRSTRLEN, serv, 6, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
+                       host, INET6_ADDRSTRLEN, serv, 6, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
       {
-	strcpy (host, "???");
-	strcpy (serv, "?????");
+        strcpy (host, "???");
+        strcpy (serv, "?????");
       }
       fprintf (stderr, "received %d bytes from %s:%s\n", n, host, serv);
     }
@@ -382,94 +382,94 @@ samplicate (ctx)
     {
       for (sctx = ctx->sources[source_type]; sctx != NULL; sctx = sctx->next)
       {
-	if (match_addr_p ((struct sockaddr *) &remote_address,
-			  (struct sockaddr *) &sctx->source, (struct sockaddr *) &sctx->mask))
-	{
-	  matches++;
-	  sctx->matched_packets += 1;
-	  sctx->matched_octets += n;
+        if (match_addr_p ((struct sockaddr *) &remote_address,
+                          (struct sockaddr *) &sctx->source, (struct sockaddr *) &sctx->mask))
+        {
+          matches++;
+          sctx->matched_packets += 1;
+          sctx->matched_octets += n;
 
-	  /* no need to continue if the source is blacklisted */
-	  if (source_type == TYPE_BLACKLIST)
-	  {
-	    if (ctx->debug)
-	    {
-	      if (getnameinfo ((struct sockaddr *) &remote_address, addrlen,
-			       host, INET6_ADDRSTRLEN, serv, 6, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
-	      {
-		strcpy (host, "???");
-	      }
-	      fprintf (stderr, "Ignoring blacklisted host %s\n", host);
-	    }
+          /* no need to continue if the source is blacklisted */
+          if (source_type == TYPE_BLACKLIST)
+          {
+            if (ctx->debug)
+            {
+              if (getnameinfo ((struct sockaddr *) &remote_address, addrlen,
+                               host, INET6_ADDRSTRLEN, serv, 6, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
+              {
+                strcpy (host, "???");
+              }
+              fprintf (stderr, "Ignoring blacklisted host %s\n", host);
+            }
 
-	    break;
-	  }
+            break;
+          }
 
-	  for (i = 0; i < sctx->nreceivers; ++i)
-	  {
-	    struct receiver *receiver = &(sctx->receivers[i]);
+          for (i = 0; i < sctx->nreceivers; ++i)
+          {
+            struct receiver *receiver = &(sctx->receivers[i]);
 
-	    if (receiver->freqcount == 0)
-	    {
-	      if (send_pdu_to_receiver (receiver, fpdu, n, (struct sockaddr *) &remote_address) == -1)
-	      {
-		receiver->out_errors += 1;
-		if (getnameinfo ((struct sockaddr *) &receiver->addr,
-				 receiver->addrlen,
-				 host, INET6_ADDRSTRLEN, serv, 6, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
-		{
-		  strcpy (host, "???");
-		  strcpy (serv, "?????");
-		}
-		fprintf (stderr, "sending datagram to %s:%s failed: %s\n", host, serv, strerror (errno));
-	      }
-	      else
-	      {
-		receiver->out_packets += 1;
-		receiver->out_octets += n;
+            if (receiver->freqcount == 0)
+            {
+              if (send_pdu_to_receiver (receiver, fpdu, n, (struct sockaddr *) &remote_address) == -1)
+              {
+                receiver->out_errors += 1;
+                if (getnameinfo ((struct sockaddr *) &receiver->addr,
+                                 receiver->addrlen,
+                                 host, INET6_ADDRSTRLEN, serv, 6, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
+                {
+                  strcpy (host, "???");
+                  strcpy (serv, "?????");
+                }
+                fprintf (stderr, "sending datagram to %s:%s failed: %s\n", host, serv, strerror (errno));
+              }
+              else
+              {
+                receiver->out_packets += 1;
+                receiver->out_octets += n;
 
-		if (ctx->debug)
-		{
-		  if (getnameinfo ((struct sockaddr *) &receiver->addr,
-				   receiver->addrlen,
-				   host, INET6_ADDRSTRLEN, serv, 6, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
-		  {
-		    strcpy (host, "???");
-		    strcpy (serv, "?????");
-		  }
-		  fprintf (stderr, "  sent to %s:%s\n", host, serv);
-		}
-	      }
-	      receiver->freqcount = receiver->freq - 1;
-	    }
-	    else
-	    {
-	      receiver->freqcount -= 1;
-	    }
-	    if (ctx->tx_delay)
-	      usleep (ctx->tx_delay);
-	  }
-	}
-	else
-	{
-	  if (ctx->debug)
-	  {
-	    if (getnameinfo ((struct sockaddr *) &sctx->source,
-			     sctx->addrlen,
-			     host, INET6_ADDRSTRLEN, 0, 0, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
-	    {
-	      strcpy (host, "???");
-	    }
-	    fprintf (stderr, "Not matching %s/", host);
-	    if (getnameinfo ((struct sockaddr *) &sctx->mask,
-			     sctx->addrlen,
-			     host, INET6_ADDRSTRLEN, 0, 0, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
-	    {
-	      strcpy (host, "???");
-	    }
-	    fprintf (stderr, "%s\n", host);
-	  }
-	}
+                if (ctx->debug)
+                {
+                  if (getnameinfo ((struct sockaddr *) &receiver->addr,
+                                   receiver->addrlen,
+                                   host, INET6_ADDRSTRLEN, serv, 6, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
+                  {
+                    strcpy (host, "???");
+                    strcpy (serv, "?????");
+                  }
+                  fprintf (stderr, "  sent to %s:%s\n", host, serv);
+                }
+              }
+              receiver->freqcount = receiver->freq - 1;
+            }
+            else
+            {
+              receiver->freqcount -= 1;
+            }
+            if (ctx->tx_delay)
+              usleep (ctx->tx_delay);
+          }
+        }
+        else
+        {
+          if (ctx->debug)
+          {
+            if (getnameinfo ((struct sockaddr *) &sctx->source,
+                             sctx->addrlen,
+                             host, INET6_ADDRSTRLEN, 0, 0, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
+            {
+              strcpy (host, "???");
+            }
+            fprintf (stderr, "Not matching %s/", host);
+            if (getnameinfo ((struct sockaddr *) &sctx->mask,
+                             sctx->addrlen,
+                             host, INET6_ADDRSTRLEN, 0, 0, NI_NUMERICHOST | NI_NUMERICSERV) == -1)
+            {
+              strcpy (host, "???");
+            }
+            fprintf (stderr, "%s\n", host);
+          }
+        }
       }
     }
   }
@@ -486,13 +486,13 @@ send_pdu_to_receiver (receiver, fpdu, length, source_addr)
   {
     int rawsend_flags = ((receiver->flags & pf_CHECKSUM) ? RAWSEND_COMPUTE_UDP_CHECKSUM : 0);
     return raw_send_from_to (receiver->fd, fpdu, length,
-			     (struct sockaddr *) source_addr,
-			     (struct sockaddr *) &receiver->addr, receiver->ttl, rawsend_flags);
+                             (struct sockaddr *) source_addr,
+                             (struct sockaddr *) &receiver->addr, receiver->ttl, rawsend_flags);
   }
   else
   {
     return sendto (receiver->fd, (char *) fpdu, length, 0,
-		   (struct sockaddr *) &receiver->addr, receiver->addrlen);
+                   (struct sockaddr *) &receiver->addr, receiver->addrlen);
   }
 }
 
@@ -541,30 +541,30 @@ make_send_sockets (struct samplicator_context *ctx)
     {
       for (i = 0; i < sctx->nreceivers; ++i)
       {
-	struct receiver *receiver = &sctx->receivers[i];
-	int af = receiver->addr.ss_family;
-	int af_index = af == AF_INET ? 0 : 1;
-	int spoof_p = receiver->flags & pf_SPOOF;
+        struct receiver *receiver = &sctx->receivers[i];
+        int af = receiver->addr.ss_family;
+        int af_index = af == AF_INET ? 0 : 1;
+        int spoof_p = receiver->flags & pf_SPOOF;
 
-	if (socks[spoof_p][af_index] == -1)
-	{
-	  if ((socks[spoof_p][af_index] = make_udp_socket (ctx->sockbuflen, spoof_p, af)) < 0)
-	  {
-	    if (spoof_p && errno == EPERM)
-	    {
-	      fprintf (stderr, "Not enough privilege for -S option---try again as root.\n");
-	      return -1;
-	    }
-	    else
-	    {
-	      fprintf (stderr, "Error creating%s socket: %s\n", spoof_p ? " raw" : "", strerror (errno));
-	    }
-	    return -1;
-	  }
-	}
-	receiver->fd = socks[spoof_p][af_index];
+        if (socks[spoof_p][af_index] == -1)
+        {
+          if ((socks[spoof_p][af_index] = make_udp_socket (ctx->sockbuflen, spoof_p, af)) < 0)
+          {
+            if (spoof_p && errno == EPERM)
+            {
+              fprintf (stderr, "Not enough privilege for -S option---try again as root.\n");
+              return -1;
+            }
+            else
+            {
+              fprintf (stderr, "Error creating%s socket: %s\n", spoof_p ? " raw" : "", strerror (errno));
+            }
+            return -1;
+          }
+        }
+        receiver->fd = socks[spoof_p][af_index];
       }
     }
-  }				/* end for t */
+  }                             /* end for t */
   return 0;
 }

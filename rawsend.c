@@ -84,9 +84,9 @@ raw_send_from_to (s, msg, msglen, saddr_generic, daddr_generic, ttl, flags)
   uh.uh_ulen = htons (msglen + sizeof uh);
   uh.uh_sum = flags & RAWSEND_COMPUTE_UDP_CHECKSUM
     ? udp_sum_calc (msglen,
-		    ntohl (saddr->sin_addr.s_addr),
-		    ntohs (saddr->sin_port),
-		    ntohl (daddr->sin_addr.s_addr), ntohs (daddr->sin_port), msg) : 0;
+                    ntohl (saddr->sin_addr.s_addr),
+                    ntohs (saddr->sin_port),
+                    ntohl (daddr->sin_addr.s_addr), ntohs (daddr->sin_port), msg) : 0;
 
   length = msglen + sizeof uh + sizeof ih;
 #ifndef HAVE_SYS_UIO_H
@@ -248,7 +248,7 @@ ip_header_checksum (const void *header)
 
 uint16_t
 udp_sum_calc (uint16_t len_udp,
-	      uint32_t src_addr, uint16_t src_port, uint32_t dest_addr, uint16_t dest_port, const void *buff)
+              uint32_t src_addr, uint16_t src_port, uint32_t dest_addr, uint16_t dest_port, const void *buff)
 {
   uint16_t prot_udp = 17;
   uint16_t chksum_init = 0;
@@ -280,7 +280,7 @@ udp_sum_calc (uint16_t len_udp,
   sum += ((uint32_t) high + (uint32_t) low);
 
   /* the protocol and the number and the length of the UDP packet */
-  udp_len_total = len_udp + 8;	/* length sent is length of data, need to add 8 */
+  udp_len_total = len_udp + 8;  /* length sent is length of data, need to add 8 */
   sum += ((uint32_t) prot_udp + (uint32_t) udp_len_total);
 
 
