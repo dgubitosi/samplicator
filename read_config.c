@@ -380,7 +380,7 @@ parse_addr_mask (start, end, ctx, addrp, maskp, addrlenp)
     char *zero = "0.0.0.0";
     resolve_addr (zero, ctx, addrp, addrlenp);
     resolve_addr (zero, ctx, maskp, addrlenp);
-    return TYPE_UNMATCHED;
+    return CAT_UNMATCHED;
   }
 
   if (parse_addr (start, slash == 0 ? end : slash, ctx, addrp, addrlenp) == -1)
@@ -394,7 +394,7 @@ parse_addr_mask (start, end, ctx, addrp, maskp, addrlenp)
   else
     set_default_mask (ctx, maskp, addrp);
 
-  return TYPE_STANDARD;
+  return CAT_STANDARD;
 }
 
 /*
@@ -497,13 +497,13 @@ parse_line (ctx, start, end)
        prevent the combination of blacklist and unmatched
      */
 
-    unsigned source_type = (unsigned) ret;
-    if (source_type == TYPE_UNMATCHED && argc == 0)
+    unsigned category = (unsigned) ret;
+    if (category == CAT_UNMATCHED && argc == 0)
       return -1;
 
     if (argc == 0)
-      source_type = TYPE_BLACKLIST;
-    if (parse_receivers (argc, argv, ctx, sctx, source_type) == -1)
+      category = CAT_BLACKLIST;
+    if (parse_receivers (argc, argv, ctx, sctx, category) == -1)
       return -1;
   }
   else
@@ -712,13 +712,17 @@ expand_port_ranges (argc, argv, exp_argc, exp_argv)
 
 
 int
-parse_receivers (argc, argv, ctx, sctx, source_type)
+parse_receivers (argc, argv, ctx, sctx, category)
      int argc;
      const char **argv;
      struct samplicator_context *ctx;
      struct source_context *sctx;
-     unsigned source_type;
+     unsigned category;
 {
+  /* validate category is within bounds */
+  if (category >= CAT_UNKNOWN)
+    return -1;
+
   int i;
   int exp_argc;
   const char **exp_argv;
@@ -736,8 +740,8 @@ parse_receivers (argc, argv, ctx, sctx, source_type)
     return parse_error (ctx, "Out of memory");
   }
 
-  /* no receivers */
-  if (source_type != TYPE_BLACKLIST)
+  /* blacklist has no receivers */
+  if (category != CAT_BLACKLIST)
   {
     /* fill in receiver entries */
     for (i = 0; i < exp_argc; ++i)
@@ -747,15 +751,15 @@ parse_receivers (argc, argv, ctx, sctx, source_type)
     }
   }
 
-  /* append to the correct source_context */
-  if (ctx->sources[source_type] == NULL)
+  /* append to the correct source_context category */
+  if (ctx->sources[category] == NULL)
   {
-    ctx->sources[source_type] = sctx;
+    ctx->sources[category] = sctx;
   }
   else
   {
     struct source_context *ptr;
-    for (ptr = ctx->sources[source_type]; ptr->next != NULL; ptr = ptr->next);
+    for (ptr = ctx->sources[category]; ptr->next != NULL; ptr = ptr->next);
     ptr->next = sctx;
   }
   return 0;
@@ -788,11 +792,11 @@ parse_args (argc, argv, ctx)
   ctx->pid_file = (const char *) 0;
   ctx->default_receiver_flags = pf_CHECKSUM;
 
-  unsigned source_type;
-  for (source_type = TYPE_BLACKLIST; source_type < NUM_TYPES; source_type++)
-    ctx->sources[source_type] = NULL;
+  unsigned category;
+  for (category = CAT_BLACKLIST; category < NUM_CATEGORIES; category++)
+    ctx->sources[category] = NULL;
 
-  unsigned category = TYPE_STANDARD;
+  category = CAT_STANDARD;
   optind = 1;
   while ((i = getopt (argc, (char **) argv, "hu:b:d:t:m:p:s:x:c:fSn46X")) != -1)
   {
@@ -851,7 +855,7 @@ parse_args (argc, argv, ctx)
       break;
     case 'X':
       /* uses command line receivers for unmatched sources */
-      category = TYPE_UNMATCHED;
+      category = CAT_UNMATCHED;
       break;
     default:
       short_usage (argv[0]);

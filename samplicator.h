@@ -14,20 +14,27 @@ enum receiver_flags
   pf_CHECKSUM = 0x0002,
 };
 
-extern char *str_source_type[];
-
-enum SOURCE_TYPES
+enum _CATEGORIES 
 {
-  TYPE_BLACKLIST,
-  TYPE_STANDARD,
-  TYPE_UNMATCHED,
-  TYPE_UNKNOWN
+  CAT_BLACKLIST,
+  CAT_STANDARD,
+  CAT_UNMATCHED,
+  CAT_UNKNOWN
 };
-#define NUM_TYPES TYPE_UNKNOWN
+
+#define NUM_CATEGORIES CAT_UNKNOWN
+
+static char *STR_CATEGORY[] =
+{
+  "Blacklist",
+  "Standard",
+  "Unmatched",
+  "Unknown"
+};
 
 struct samplicator_context
 {
-  struct source_context *sources[NUM_TYPES];
+  struct source_context *sources[NUM_CATEGORIES];
   const char *faddr_spec;
   struct sockaddr_storage faddr;
   const char *fport_spec;

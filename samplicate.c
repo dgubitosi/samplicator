@@ -45,14 +45,6 @@ static int make_udp_socket (long, int, int);
 static int make_recv_socket (struct samplicator_context *);
 static int make_send_sockets (struct samplicator_context *);
 
-char *str_source_type[] =
-{
-  "Blacklist",
-  "Standard",
-  "Unmatched",
-  "Unknown"
-};
-
 int
 main (argc, argv)
      int argc;
@@ -217,12 +209,12 @@ init_samplicator (ctx)
     return -1;
   }
 
-  unsigned source_type;
+  unsigned category;
   /* check both standard sources and unmatched_sources for receivers */
-  for (source_type = TYPE_STANDARD; source_type < NUM_TYPES; source_type++)
+  for (category = CAT_STANDARD; category < NUM_CATEGORIES; category++)
   {
     /* check is there actually at least one configured data receiver */
-    for (sctx = ctx->sources[source_type]; sctx != NULL; sctx = sctx->next)
+    for (sctx = ctx->sources[category]; sctx != NULL; sctx = sctx->next)
     {
       i += sctx->nreceivers;
     }
@@ -387,10 +379,10 @@ samplicate (ctx)
      */
 
     unsigned matches = 0;
-    unsigned source_type;
-    for (source_type = TYPE_BLACKLIST; matches == 0 && source_type < TYPE_UNKNOWN; source_type++)
+    unsigned category;
+    for (category = CAT_BLACKLIST; matches == 0 && category < CAT_UNKNOWN; category++)
     {
-      for (sctx = ctx->sources[source_type]; sctx != NULL; sctx = sctx->next)
+      for (sctx = ctx->sources[category]; sctx != NULL; sctx = sctx->next)
       {
 
         if (ctx->debug)
@@ -417,10 +409,10 @@ samplicate (ctx)
           /* output matches */
           if (ctx->debug)
             fprintf (stderr, "Host %s matches category %s (%s/%s)\n", host,
-                     str_source_type[source_type], addr, mask);
+                     STR_CATEGORY[category], addr, mask);
 
           /* no need to continue if the source is blacklisted */
-          if (source_type == TYPE_BLACKLIST)
+          if (category == CAT_BLACKLIST)
           {
             if (ctx->debug)
               fprintf (stderr, "  dropping blacklisted host %s\n", host);
@@ -475,7 +467,7 @@ samplicate (ctx)
         else
         {
           /* skip this if the Unmatched category exists */
-          if (ctx->debug && ctx->sources[TYPE_UNMATCHED] == NULL)
+          if (ctx->debug && ctx->sources[CAT_UNMATCHED] == NULL)
           {
             if (getnameinfo ((struct sockaddr *) &sctx->source,
                              sctx->addrlen,
@@ -556,11 +548,11 @@ make_send_sockets (struct samplicator_context *ctx)
 
   struct source_context *sctx;
   unsigned i;
-  unsigned source_type;
-  for (source_type = TYPE_STANDARD; source_type < TYPE_UNKNOWN; source_type++)
+  unsigned category;
+  for (category = CAT_STANDARD; category < CAT_UNKNOWN; category++)
   {
 
-    for (sctx = ctx->sources[source_type]; sctx != 0; sctx = sctx->next)
+    for (sctx = ctx->sources[category]; sctx != 0; sctx = sctx->next)
     {
       for (i = 0; i < sctx->nreceivers; ++i)
       {
