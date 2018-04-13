@@ -441,6 +441,45 @@ samplicate (ctx)
               rec_end = rec_start + 1;
               if (ctx->debug)
                 fprintf (stderr, "  addr %ld hash %ld matches modulus index %d\n", remote_addr, hash, rec_start);
+
+              /* cache the source and receiver */
+              struct source_context *new_sctx = calloc (1, sizeof (struct source_context));
+              if (new_sctx == 0)
+              {
+                fprintf (stderr, "Out of memory\n");
+                return -1;
+              }
+              new_sctx->next = NULL;
+              new_sctx->source = remote_address;
+              new_sctx->addrlen = addrlen;
+
+              /* 32 bit mask */
+              struct sockaddr_storage *new_mask = &new_sctx->mask;
+              bzero (new_mask, sizeof (struct sockaddr_in));
+              new_mask->ss_family = AF_INET;
+              memset (&((struct sockaddr_in *) new_mask)->sin_addr, 0xff, 4);
+
+              /* cache the hashed receiver */
+              new_sctx->nreceivers = 1;
+              if (!(new_sctx->receivers = (struct receiver *) calloc (1, sizeof (struct receiver))))
+              {
+                fprintf (stderr, "Out of memory\n");
+                return -1;
+              }
+              new_sctx->receivers[0] = sctx->receivers[rec_start];
+
+              /* append new source to the CAT_STANDARD */
+              if (ctx->sources[CAT_STANDARD] == NULL)
+              {
+                ctx->sources[category] = new_sctx;
+              }
+              else
+              {
+                struct source_context *ptr;
+                for (ptr = ctx->sources[CAT_STANDARD]; ptr->next != NULL; ptr = ptr->next);
+                  ptr->next = new_sctx;
+              }
+              
             }
           }
 
