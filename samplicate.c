@@ -430,11 +430,17 @@ samplicate (ctx)
             if (sa->sa_family == AF_INET)
             {
               struct sockaddr_in *sin = (struct sockaddr_in *) &remote_address;
-              long remote_addr = ntohl(sin->sin_addr.s_addr);
-              rec_start = remote_addr % sctx->nreceivers;
+              uint32_t remote_addr = ntohl(sin->sin_addr.s_addr);
+
+              /* source is squared and the middle 32 bits are used */
+              uint64_t hash = remote_addr * remote_addr;
+              hash &= 0x0000ffffffff0000;
+              hash >>= 16;
+
+              rec_start = hash % sctx->nreceivers;
               rec_end = rec_start + 1;
               if (ctx->debug)
-                fprintf (stderr, "  source %ld matches modulus index %d\n", remote_addr, rec_start);
+                fprintf (stderr, "  addr %ld hash %ld matches modulus index %d\n", remote_addr, hash, rec_start);
             }
           }
 
