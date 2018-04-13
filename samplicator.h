@@ -10,8 +10,9 @@
 
 enum receiver_flags
 {
-  pf_SPOOF = 0x0001,
-  pf_CHECKSUM = 0x0002,
+  pf_SPOOF = 1 << 0,
+  pf_CHECKSUM = 1 << 1,
+  pf_HASH = 1 << 2
 };
 
 enum _CATEGORIES 

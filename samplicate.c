@@ -419,7 +419,27 @@ samplicate (ctx)
             break;
           }
 
-          for (i = 0; i < sctx->nreceivers; ++i)
+          unsigned rec_start = 0;
+          unsigned rec_end = sctx->nreceivers;
+
+          /* pf_HASH */
+          if (category == CAT_UNMATCHED)
+          {
+            /* IPv4 */
+            struct sockaddr *sa = (struct sockaddr *) &remote_address;
+            if (sa->sa_family == AF_INET)
+            {
+              struct sockaddr_in *sin = (struct sockaddr_in *) &remote_address;
+              long remote_addr = ntohl(sin->sin_addr.s_addr);
+              rec_start = remote_addr % sctx->nreceivers;
+              rec_end = rec_start + 1;
+              if (ctx->debug)
+                fprintf (stderr, "  source %ld matches modulus index %d\n", remote_addr, rec_start);
+            }
+          }
+
+          /* for (i = 0; i < sctx->nreceivers; ++i) */
+          for (i = rec_start; i < rec_end; ++i)
           {
             struct receiver *receiver = &(sctx->receivers[i]);
 
